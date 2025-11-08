@@ -1,0 +1,184 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Code Quality & Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('monitoring/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python dependencies
+        run: |
+          cd monitoring
+          pip install -r requirements.txt
+
+      - name: Run Python syntax check
+        run: |
+          cd monitoring
+          python -m py_compile app.py
+
+      - name: Check Python imports
+        run: |
+          cd monitoring
+          python -c "import app; print('All imports successful')"
+
+      - name: Validate JSON configuration
+        run: |
+          cd monitoring
+          python -c "import json; json.load(open('services-config.json')); print('JSON is valid')"
+
+      - name: Check shell scripts syntax
+        run: |
+          # Check bash scripts for syntax errors
+          bash -n generate-secrets.sh || exit 1
+          bash -n generate-docker-secrets.sh || exit 1
+          bash -n generate-ssl.sh || exit 1
+          bash -n harden-security.sh || exit 1
+          bash -n setup.sh || exit 1
+
+      - name: Validate docker-compose configuration
+        run: |
+          docker-compose config --quiet || exit 1
+          echo "Docker Compose configuration is valid"
+
+      - name: Check for sensitive data
+        run: |
+          # Check for accidentally committed secrets
+          if grep -r "password\|secret\|key\|token" --exclude-dir=.git --exclude-dir=.github . | grep -v "generate-" | grep -v "README" | grep -v "example"; then
+            echo "Potential sensitive data found in files!"
+            exit 1
+          fi
+
+      - name: Check file permissions
+        run: |
+          # Ensure scripts are executable
+          ls -la *.sh | grep -v "rwxr" && echo "Some scripts may not be executable" || echo "All scripts are executable"
+
+      - name: Validate environment template
+        run: |
+          if [ ! -f ".env.example" ]; then
+            echo ".env.example file is missing!"
+            exit 1
+          fi
+
+          # Check that all required variables are documented
+          grep -E "^[A-Z_]+" .env.example || echo "No environment variables found in .env.example"
+
+      - name: Check documentation completeness
+        run: |
+          # Ensure all main documentation files exist
+          docs=("README.md" "API_DOCUMENTATION.md" "DEPLOYMENT_GUIDE.md" "CONFIGURATION_REFERENCE.md" "TROUBLESHOOTING_GUIDE.md")
+          for doc in "${docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              echo "Documentation file $doc is missing!"
+              exit 1
+            fi
+          done
+          echo "All documentation files are present"
+
+      - name: Validate Makefile
+        run: |
+          # Check that Makefile exists and has basic targets
+          if [ ! -f "Makefile" ]; then
+            echo "Makefile is missing!"
+            exit 1
+          fi
+
+          # Check for essential targets
+          grep -E "^(setup|up|down|health|status):" Makefile || echo "Some essential Makefile targets may be missing"
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+      - name: Check for security issues in Docker files
+        run: |
+          # Check Dockerfile for security best practices
+          if grep -n "FROM.*:latest" monitoring/Dockerfile; then
+            echo "Warning: Using 'latest' tag in Dockerfile"
+          fi
+
+          # Check for ADD command (should use COPY)
+          if grep -n "^ADD " monitoring/Dockerfile; then
+            echo "Warning: Using ADD instead of COPY in Dockerfile"
+          fi
+
+          # Check for running as root
+          if grep -n "USER root" monitoring/Dockerfile; then
+            echo "Warning: Running as root user"
+          fi
+
+  test-docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build monitoring service (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./monitoring
+          file: ./monitoring/Dockerfile
+          push: false
+          tags: test-build
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          # Create and run test container
+          docker run -d --name test-monitoring -p 5002:5000 test-build
+
+          # Wait for startup
+          sleep 5
+
+          # Test health endpoint
+          timeout 10 bash -c 'until curl -f http://localhost:5002/health; do sleep 1; done' || exit 1
+
+          # Cleanup
+          docker stop test-monitoring
+          docker rm test-monitoring
+          docker rmi test-build

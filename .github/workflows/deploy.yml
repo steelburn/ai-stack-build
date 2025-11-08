@@ -1,0 +1,295 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.dockerignore'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.dockerignore'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      deploy:
+        description: 'Deploy after build'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Test and build job
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build monitoring service
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./monitoring
+          file: ./monitoring/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/monitoring.tar
+
+      - name: Test monitoring service
+        run: |
+          # Load the built image
+          docker load < /tmp/monitoring.tar
+
+          # Create test network
+          docker network create test-network
+
+          # Run monitoring service with test config
+          docker run -d --name monitoring-test \
+            --network test-network \
+            -e MONITORING_USERNAME=test \
+            -e MONITORING_PASSWORD=test \
+            -p 5001:5000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+          # Wait for service to start
+          sleep 10
+
+          # Test health endpoint
+          curl -f http://localhost:5001/health || exit 1
+
+          # Test basic auth
+          curl -u test:test http://localhost:5001/health || exit 1
+
+          # Cleanup
+          docker stop monitoring-test
+          docker rm monitoring-test
+          docker network rm test-network
+
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          scan-ref: '/tmp/monitoring.tar'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Validate docker-compose
+        run: |
+          docker-compose config --quiet
+
+      - name: Check secrets generation scripts
+        run: |
+          # Test that scripts exist and are executable
+          ls -la generate-*.sh
+          # Basic syntax check (don't run them as they need user input)
+          bash -n generate-secrets.sh || exit 1
+          bash -n generate-docker-secrets.sh || exit 1
+          bash -n generate-ssl.sh || exit 1
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    needs: test
+    runs-on: ubuntu-latest
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      github.event_name == 'push' &&
+      !contains(github.event.head_commit.message, '[skip deploy]')
+
+    environment:
+      name: staging
+      url: https://staging.yourdomain.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to staging
+        run: |
+          ssh ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_HOST }} << EOF
+            cd /opt/ai-stack-build
+            git pull origin main
+            make down
+            make setup
+            make up
+            make health
+          EOF
+
+      - name: Run staging tests
+        run: |
+          sleep 30  # Wait for services to be ready
+          ssh ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_HOST }} << EOF
+            cd /opt/ai-stack-build
+            curl -k https://localhost/monitoring/health
+            make status
+          EOF
+
+  # Deploy to production (manual trigger)
+  deploy-production:
+    name: Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.environment == 'production' &&
+      github.event.inputs.deploy == 'true'
+
+    environment:
+      name: production
+      url: https://yourdomain.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup before deployment
+        run: |
+          ssh ${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_HOST }} << EOF
+            cd /opt/ai-stack-build
+            make backup
+          EOF
+
+      - name: Deploy to production
+        run: |
+          ssh ${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_HOST }} << EOF
+            cd /opt/ai-stack-build
+            git pull origin main
+            make down
+            make setup
+            make up
+            make health
+          EOF
+
+      - name: Run production health checks
+        run: |
+          sleep 60  # Wait for all services to be ready
+          ssh ${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_HOST }} << EOF
+            cd /opt/ai-stack-build
+            curl -k https://localhost/monitoring/health
+            make status
+            make diagnose
+          EOF
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh ${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_HOST }} << EOF
+            cd /opt/ai-stack-build
+            echo "Deployment failed, initiating rollback..."
+            make down
+            # Restore from backup if needed
+            # make restore FILE=backup/pre_deploy_backup.tar.gz
+            make up
+          EOF
+
+  # Notification job
+  notify:
+    name: Send Notifications
+    needs: [test, deploy-staging, deploy-production]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL != null
+        with:
+          status: ${{ job.status }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Discord notification
+        uses: sarisia/actions-status-discord@v1
+        if: env.DISCORD_WEBHOOK != null
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          title: "AI Stack Build CI/CD"
+          description: |
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Triggered by:** ${{ github.actor }}
+
+  # Cleanup job
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test, notify]
+
+    steps:
+      - name: Clean up old packages
+        run: |
+          echo "Cleaning up old container images..."
+          docker system prune -f
+          docker image prune -f --filter "until=24h"

@@ -1,0 +1,153 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Set version from input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+
+      - name: Validate version format
+        run: |
+          if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format. Expected: v1.2.3"
+            exit 1
+          fi
+
+      - name: Build Docker images
+        run: |
+          # Build monitoring service
+          docker build -t ai-stack-monitoring:$VERSION ./monitoring
+          docker tag ai-stack-monitoring:$VERSION ai-stack-monitoring:latest
+
+      - name: Create release archive
+        run: |
+          # Create release directory
+          mkdir -p release
+
+          # Copy essential files
+          cp README.md release/
+          cp docker-compose.yml release/
+          cp .env.example release/
+          cp -r monitoring release/
+          cp -r nginx release/
+          cp -r config release/
+
+          # Remove development files
+          rm -rf release/monitoring/__pycache__
+          rm -f release/monitoring/*.pyc
+
+          # Create tarball
+          tar -czf ai-stack-build-$VERSION.tar.gz release/
+          mv ai-stack-build-$VERSION.tar.gz release/
+
+      - name: Generate release notes
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            # Generate changelog
+            echo "## Changes since $PREVIOUS_TAG" > release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> release_notes.md
+          else
+            echo "## Initial Release" > release_notes.md
+            echo "" >> release_notes.md
+            echo "First release of AI Stack Build" >> release_notes.md
+          fi
+
+          # Add installation instructions
+          echo "" >> release_notes.md
+          echo "## Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "1. Download and extract \`ai-stack-build-$VERSION.tar.gz\`" >> release_notes.md
+          echo "2. Run \`./setup.sh\` to generate secrets" >> release_notes.md
+          echo "3. Run \`docker-compose up -d\` to start services" >> release_notes.md
+          echo "4. Access monitoring at \`https://localhost/monitoring\`" >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: AI Stack Build ${{ env.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release/ai-stack-build-${{ env.VERSION }}.tar.gz
+          asset_name: ai-stack-build-${{ env.VERSION }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Publish to GitHub Container Registry
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          # Tag and push monitoring image
+          docker tag ai-stack-monitoring:$VERSION ghcr.io/${{ github.repository }}/monitoring:$VERSION
+          docker tag ai-stack-monitoring:$VERSION ghcr.io/${{ github.repository }}/monitoring:latest
+          docker push ghcr.io/${{ github.repository }}/monitoring:$VERSION
+          docker push ghcr.io/${{ github.repository }}/monitoring:latest
+
+      - name: Notify on release
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          title: '🚀 New AI Stack Build Release'
+          text: 'Version ${{ env.VERSION }} has been released!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  cleanup:
+    name: Post-Release Cleanup
+    runs-on: ubuntu-latest
+    if: success()
+    needs: release
+
+    steps:
+      - name: Clean up local images
+        run: |
+          docker rmi ai-stack-monitoring:${{ env.VERSION }} || true
+          docker rmi ai-stack-monitoring:latest || true
+          docker system prune -f

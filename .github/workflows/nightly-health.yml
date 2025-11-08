@@ -1,0 +1,171 @@
+name: Nightly Health Check
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: System Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate repository structure
+        run: |
+          # Check for required files
+          required_files=("README.md" "docker-compose.yml" ".env.example" "Makefile")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            fi
+          done
+          echo "✅ All required files present"
+
+      - name: Check Docker Compose configuration
+        run: |
+          if docker-compose config --quiet; then
+            echo "✅ Docker Compose configuration is valid"
+          else
+            echo "❌ Docker Compose configuration has errors"
+            exit 1
+          fi
+
+      - name: Validate scripts
+        run: |
+          scripts=("generate-secrets.sh" "generate-docker-secrets.sh" "generate-ssl.sh" "setup.sh")
+          for script in "${scripts[@]}"; do
+            if [ -f "$script" ]; then
+              if bash -n "$script"; then
+                echo "✅ $script syntax is valid"
+              else
+                echo "❌ $script has syntax errors"
+                exit 1
+              fi
+            else
+              echo "❌ Missing script: $script"
+              exit 1
+            fi
+          done
+
+      - name: Check monitoring service
+        run: |
+          cd monitoring
+
+          # Check Python syntax
+          if python -m py_compile app.py; then
+            echo "✅ Monitoring app syntax is valid"
+          else
+            echo "❌ Monitoring app has syntax errors"
+            exit 1
+          fi
+
+          # Check requirements
+          if [ -f "requirements.txt" ]; then
+            echo "✅ Requirements file exists"
+          else
+            echo "❌ Missing requirements.txt"
+            exit 1
+          fi
+
+          # Check Dockerfile
+          if [ -f "Dockerfile" ]; then
+            echo "✅ Dockerfile exists"
+          else
+            echo "❌ Missing Dockerfile"
+            exit 1
+          fi
+
+      - name: Validate documentation
+        run: |
+          docs=("README.md" "API_DOCUMENTATION.md" "DEPLOYMENT_GUIDE.md" "CONFIGURATION_REFERENCE.md" "TROUBLESHOOTING_GUIDE.md")
+          for doc in "${docs[@]}"; do
+            if [ -f "$doc" ]; then
+              echo "✅ $doc exists"
+            else
+              echo "❌ Missing documentation: $doc"
+              exit 1
+            fi
+          done
+
+      - name: Check for security issues
+        run: |
+          # Check for accidentally committed secrets
+          if grep -r -i "password\|secret\|key\|token" --exclude-dir=.git --exclude-dir=.github --exclude-dir=secrets . | grep -v "generate-" | grep -v "README" | grep -v "example" | grep -v ".md" | head -5; then
+            echo "⚠️  Potential sensitive data found in repository"
+            echo "Please review and remove any accidentally committed secrets"
+          else
+            echo "✅ No obvious secrets found in repository"
+          fi
+
+      - name: Check disk usage
+        run: |
+          # Check repository size
+          repo_size=$(du -sh . | cut -f1)
+          echo "📊 Repository size: $repo_size"
+
+          # Check for large files
+          large_files=$(find . -type f -size +50M -not -path "./.git/*" | head -5)
+          if [ -n "$large_files" ]; then
+            echo "⚠️  Large files found:"
+            echo "$large_files"
+          else
+            echo "✅ No unusually large files"
+          fi
+
+      - name: Test build process
+        run: |
+          # Test Docker build (without push)
+          if docker build -t test-build ./monitoring --quiet; then
+            echo "✅ Monitoring service builds successfully"
+            docker rmi test-build
+          else
+            echo "❌ Monitoring service build failed"
+            exit 1
+          fi
+
+      - name: Generate health report
+        run: |
+          echo "## 🏥 Nightly Health Report" > health_report.md
+          echo "" >> health_report.md
+          echo "**Date:** $(date)" >> health_report.md
+          echo "**Repository:** ${{ github.repository }}" >> health_report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> health_report.md
+          echo "" >> health_report.md
+          echo "### ✅ Checks Passed" >> health_report.md
+          echo "- Repository structure validation" >> health_report.md
+          echo "- Docker Compose configuration" >> health_report.md
+          echo "- Script syntax validation" >> health_report.md
+          echo "- Python code validation" >> health_report.md
+          echo "- Documentation completeness" >> health_report.md
+          echo "- Docker build test" >> health_report.md
+          echo "" >> health_report.md
+          echo "### 📊 Metrics" >> health_report.md
+          echo "- Repository size: $(du -sh . | cut -f1)" >> health_report.md
+          echo "- Files checked: $(find . -type f -not -path "./.git/*" | wc -l)" >> health_report.md
+          echo "" >> health_report.md
+          echo "---" >> health_report.md
+          echo "*Generated by nightly health check workflow*" >> health_report.md
+
+      - name: Upload health report
+        uses: actions/upload-artifact@v3
+        with:
+          name: nightly-health-report
+          path: health_report.md
+          retention-days: 30
+
+      - name: Send health notification
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          title: '🚨 AI Stack Build Health Check Failed'
+          text: 'Nightly health check found issues that need attention.'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

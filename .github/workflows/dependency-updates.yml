@@ -1,0 +1,141 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of update to perform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - python
+          - docker
+          - security
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Update Python dependencies
+        if: github.event.inputs.update_type == 'all' || github.event.inputs.update_type == 'python' || github.event_name == 'schedule'
+        run: |
+          cd monitoring
+
+          # Backup current requirements
+          cp requirements.txt requirements.txt.backup
+
+          # Update dependencies
+          pip install --upgrade pip-tools
+          pip-compile --upgrade requirements.in
+
+          # Check if requirements changed
+          if ! diff requirements.txt requirements.txt.backup > /dev/null; then
+            echo "Python dependencies updated"
+            echo "DEPENDENCIES_UPDATED=true" >> $GITHUB_ENV
+          else
+            echo "No Python dependency updates needed"
+          fi
+
+      - name: Update Docker base images
+        if: github.event.inputs.update_type == 'all' || github.event.inputs.update_type == 'docker' || github.event_name == 'schedule'
+        run: |
+          # Check for newer base images
+          docker pull python:3.9-slim
+          docker pull nginx:alpine
+          docker pull postgres:15-alpine
+
+          echo "Docker base images checked for updates"
+
+      - name: Run security audit
+        if: github.event.inputs.update_type == 'all' || github.event.inputs.update_type == 'security' || github.event_name == 'schedule'
+        run: |
+          cd monitoring
+
+          # Check for vulnerable packages
+          pip install safety
+          safety check --output json > security_audit.json || true
+
+          # Check results
+          if grep -q '"vulnerabilities"' security_audit.json; then
+            echo "Security vulnerabilities found!"
+            cat security_audit.json
+            echo "SECURITY_ISSUES=true" >> $GITHUB_ENV
+          else
+            echo "No security issues found"
+          fi
+
+      - name: Create pull request
+        if: env.DEPENDENCIES_UPDATED == 'true' || env.SECURITY_ISSUES == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            🔄 Automated dependency updates
+
+            - Updated Python dependencies
+            - Checked for security vulnerabilities
+            - Updated Docker base images
+          title: '🔄 Automated Dependency Updates'
+          body: |
+            ## 🤖 Automated Dependency Updates
+
+            This PR contains automated updates for:
+            - Python dependencies in `monitoring/requirements.txt`
+            - Docker base images
+            - Security vulnerability checks
+
+            ### Changes Made:
+            - Updated Python packages to latest compatible versions
+            - Refreshed Docker base images
+            - Ran security audit on dependencies
+
+            ### Testing:
+            - [ ] Run `make test` to verify functionality
+            - [ ] Check `make health` after deployment
+            - [ ] Verify monitoring dashboard works correctly
+
+            ---
+            🤖 This PR was automatically created by the dependency update workflow.
+          branch: automated/dependency-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+            maintenance
+
+  cleanup:
+    name: Cleanup Old Images
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Clean up Docker
+        run: |
+          # Clean up old images and containers
+          docker system prune -f
+          docker image prune -f --filter "until=168h"  # 7 days
+
+      - name: Clean up GitHub Packages
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'ai-stack-build'
+          package-type: 'container'
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true

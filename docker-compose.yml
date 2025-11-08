@@ -1,0 +1,369 @@
+version: '3.8'
+
+# Global logging configuration for security monitoring
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    labels: "security"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: ${POSTGRES_DB}
+    secrets:
+      - db_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - ai-stack
+
+  # === REDIS ===
+  redis:
+    image: redis:6-alpine
+    restart: always
+    command: redis-server --requirepassfile /run/secrets/redis_password
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ai-stack
+
+  # === VECTOR DATABASE ===
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    restart: always
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY_FILE: /run/secrets/qdrant_api_key
+    secrets:
+      - qdrant_api_key
+    networks:
+      - ai-stack
+
+  # === MEM0 ===
+  mem0:
+    image: mem0ai/mem0:latest
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      QDRANT_URL: ${QDRANT_URL}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      qdrant:
+        condition: service_started
+    volumes:
+      - mem0_data:/app/data
+    networks:
+      - ai-stack
+
+  # === OLLAMA ===
+  ollama:
+    image: ollama/ollama:latest
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    networks:
+      - ai-stack
+
+  # === LITELLM PROXY ===
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      LITELLM_MASTER_KEY_FILE: /run/secrets/litellm_master_key
+      LITELLM_SALT_KEY_FILE: /run/secrets/litellm_salt_key
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - litellm_master_key
+      - litellm_salt_key
+      - redis_password
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - litellm_data:/app/db
+    networks:
+      - ai-stack
+
+  # === N8N ===
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n_encryption_key
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: ${DB_HOST}
+      DB_POSTGRESDB_PORT: ${DB_PORT}
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${DB_USERNAME}
+      DB_POSTGRESDB_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - n8n_encryption_key
+      - db_password
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - ai-stack
+
+  # === FLOWISE ===
+  flowise:
+    image: flowiseai/flowise:latest
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      FLOWISE_USERNAME: ${FLOWISE_USERNAME}
+      FLOWISE_PASSWORD: ${FLOWISE_PASSWORD}
+      FLOWISE_SECRETKEY_FILE: /run/secrets/flowise_secret_key
+      DATABASE_PATH: /root/.flowise
+      APIKEY_PATH: /root/.flowise
+      LOG_PATH: /root/.flowise/logs
+      SECRETKEY_PATH: /root/.flowise
+      BLOB_STORAGE_PATH: /root/.flowise/storage
+    secrets:
+      - flowise_secret_key
+    volumes:
+      - flowise_data:/root/.flowise
+    networks:
+      - ai-stack
+
+  # === SUPABASE (Simplified) ===
+  supabase:
+    image: supabase/postgres:15.1.0.147
+    restart: always
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+    networks:
+      - ai-stack
+
+  # === OPENWEBUI ===
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: always
+    ports:
+      - "3002:8080"
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_HOST}
+      OPENWEBUI_SECRET_KEY_FILE: /run/secrets/openwebui_secret_key
+      WEBUI_AUTH: ${WEBUI_AUTH}
+      WEBUI_AUTH_USERNAME: ${WEBUI_AUTH_USERNAME}
+      WEBUI_AUTH_PASSWORD: ${WEBUI_AUTH_PASSWORD}
+    secrets:
+      - openwebui_secret_key
+    volumes:
+      - openwebui_data:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - ai-stack
+
+  # === DIFY API ===
+  dify-api:
+    image: langgenius/dify-api:1.9.2
+    restart: always
+    environment:
+      MODE: api
+      CONSOLE_API_URL: ${CONSOLE_API_URL}
+      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
+      SERVICE_API_URL: ${SERVICE_API_URL}
+      APP_API_URL: ${APP_API_URL}
+      APP_WEB_URL: ${APP_WEB_URL}
+      FILES_URL: ${FILES_URL}
+      INTERNAL_FILES_URL: ${INTERNAL_FILES_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      VECTOR_STORE: ${VECTOR_STORE}
+      QDRANT_URL: ${QDRANT_URL}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    volumes:
+      - dify_api_storage:/app/api/storage
+    networks:
+      - ai-stack
+
+  # === DIFY WORKER ===
+  dify-worker:
+    image: langgenius/dify-api:1.9.2
+    restart: always
+    environment:
+      MODE: worker
+      CONSOLE_API_URL: ${CONSOLE_API_URL}
+      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
+      SERVICE_API_URL: ${SERVICE_API_URL}
+      APP_API_URL: ${APP_API_URL}
+      APP_WEB_URL: ${APP_WEB_URL}
+      FILES_URL: ${FILES_URL}
+      INTERNAL_FILES_URL: ${INTERNAL_FILES_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      VECTOR_STORE: ${VECTOR_STORE}
+      QDRANT_URL: ${QDRANT_URL}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    volumes:
+      - dify_worker_storage:/app/api/storage
+    networks:
+      - ai-stack
+
+  # === DIFY WEB ===
+  dify-web:
+    image: langgenius/dify-web:1.9.2
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      CONSOLE_API_URL: ${CONSOLE_API_URL}
+      APP_API_URL: ${APP_API_URL}
+    depends_on:
+      - dify-api
+    networks:
+      - ai-stack
+
+  # === MONITORING DASHBOARD ===
+  monitoring:
+    build: ./monitoring
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      MONITORING_USERNAME_FILE: /run/secrets/monitoring_username
+      MONITORING_PASSWORD_FILE: /run/secrets/monitoring_password
+      SERVICES_CONFIG: /app/services-config.json
+    secrets:
+      - monitoring_username
+      - monitoring_password
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - ai-stack
+
+  # === REVERSE PROXY (Nginx with SSL) ===
+  nginx:
+    build: ./nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - dify-web
+      - n8n
+      - flowise
+      - openwebui
+      - litellm
+      - monitoring
+    networks:
+      - ai-stack
+
+networks:
+  ai-stack:
+    driver: bridge
+
+volumes:
+  db_data:
+  redis_data:
+  qdrant_data:
+  mem0_data:
+  ollama_data:
+  litellm_data:
+  n8n_data:
+  flowise_data:
+  supabase_data:
+  openwebui_data:
+  dify_api_storage:
+  dify_worker_storage:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  qdrant_api_key:
+    file: ./secrets/qdrant_api_key.txt
+  litellm_master_key:
+    file: ./secrets/litellm_master_key.txt
+  litellm_salt_key:
+    file: ./secrets/litellm_salt_key.txt
+  n8n_encryption_key:
+    file: ./secrets/n8n_encryption_key.txt
+  flowise_secret_key:
+    file: ./secrets/flowise_secret_key.txt
+  openwebui_secret_key:
+    file: ./secrets/openwebui_secret_key.txt
+  monitoring_username:
+    file: ./secrets/monitoring_username.txt
+  monitoring_password:
+    file: ./secrets/monitoring_password.txt
