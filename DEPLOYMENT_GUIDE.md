@@ -46,7 +46,22 @@ open https://localhost/monitoring/
 ./generate-ssl.sh
 
 # 3. Start services
-docker-compose up -d
+docker compose up -d
+```
+
+### Database Admin Setup (Optional)
+
+```bash
+# Enable database management
+echo "ENABLE_DATABASE_ADMIN=true" >> .env
+echo "ADMINER_USERNAME=dbadmin" >> .env
+echo "ADMINER_PASSWORD=secure-password" >> .env
+
+# Start with database admin
+make up-db-admin
+
+# Access at: https://localhost/adminer/
+```
 
 # 4. Check status
 docker-compose ps

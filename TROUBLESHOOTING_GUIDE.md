@@ -822,23 +822,24 @@ make up
 ### Emergency Access
 
 ```bash
-# Bypass authentication (temporary)
-docker-compose exec monitoring sed -i 's/@requires_auth//' app.py
-docker-compose restart monitoring
+# Bypass authentication (temporary - monitoring only)
+docker compose exec monitoring sed -i 's/@requires_auth//' app.py
+docker compose restart monitoring
 
-# Direct database access
-docker-compose exec db psql -U postgres -d dify
+# Direct database access (internal only)
+docker compose exec db psql -U postgres -d dify
 
-# Direct service access
-# Use internal ports: http://localhost:8080 (monitoring), etc.
+# Service access through reverse proxy
+# All services accessible via: https://localhost/{service}/
+# Example: https://localhost/monitoring/, https://localhost/dify/, etc.
 ```
 
 ### Log Preservation
 
 ```bash
 # Save logs before reset
-docker-compose logs > emergency_logs_$(date +%Y%m%d_%H%M%S).txt
-docker-compose logs --tail=1000 > recent_logs.txt
+docker compose logs > emergency_logs_$(date +%Y%m%d_%H%M%S).txt
+docker compose logs --tail=1000 > recent_logs.txt
 
 # Save configuration
 cp .env emergency_env_backup

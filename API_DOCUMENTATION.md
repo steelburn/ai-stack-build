@@ -23,7 +23,7 @@ The AI Stack provides RESTful APIs for all services, with consistent authenticat
 
 - **Production**: `https://your-domain.com/`
 - **Development**: `https://localhost/`
-- **Direct Access**: `http://localhost:{port}/` (bypasses reverse proxy)
+- **All Access**: Secured through Nginx reverse proxy with SSL/TLS
 
 ### Content Types
 
@@ -35,19 +35,28 @@ The AI Stack provides RESTful APIs for all services, with consistent authenticat
 
 ### HTTP Basic Authentication
 
-Most services use HTTP Basic Authentication:
+Most services use HTTP Basic Authentication through the reverse proxy:
 
 ```bash
 # Format: username:password (base64 encoded)
 Authorization: Basic <base64-encoded-credentials>
 
-# Example
+# Example - Monitoring Dashboard
 curl -u "admin:password" https://localhost/monitoring/
+
+# Example - Database Admin (Adminer)
+curl -u "dbadmin:secure-password" https://localhost/adminer/
 ```
 
-### API Key Authentication
+### Service-Specific Authentication
 
-Some services use API key authentication:
+Some services have additional authentication layers:
+
+- **Dify**: Built-in user authentication
+- **OpenWebUI**: Built-in user authentication
+- **N8N**: HTTP Basic + built-in auth
+- **Flowise**: Built-in user authentication
+- **LiteLLM**: API key authentication
 
 ```bash
 # Header format
@@ -75,7 +84,7 @@ curl -H "Authorization: Bearer sk-1234" https://localhost/litellm/chat/completio
 
 Local LLM inference service.
 
-**Base URL**: `https://localhost/ollama/` or `http://localhost:11434/`
+**Base URL**: `https://localhost/ollama/`
 
 #### Generate Completion
 

@@ -33,6 +33,9 @@ harden-security: ## Apply host-level security hardening (requires sudo)
 up: ## Start all services in detached mode
 	docker compose up -d
 
+up-db-admin: ## Start all services including database admin (Adminer)
+	docker compose --profile db-admin up -d
+
 start: up ## Alias for up
 
 down: ## Stop all services

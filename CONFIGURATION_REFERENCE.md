@@ -60,6 +60,7 @@ This document provides comprehensive reference for all configuration options, en
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OLLAMA_HOST` | `http://ollama:11434` | Ollama API host |
+| `OLLAMA_WEBUI_SECRET_KEY` | `your-secret-key` | Ollama WebUI secret key |
 | `OLLAMA_MAX_MEMORY` | - | Maximum memory for Ollama (e.g., "16GB") |
 | `OLLAMA_NUM_GPU` | - | Number of GPUs to use |
 | `OLLAMA_GPU_LAYERS` | - | GPU layers for model loading |
@@ -146,6 +147,19 @@ This document provides comprehensive reference for all configuration options, en
 | `FLASK_ENV` | `production` | Flask environment |
 | `GUNICORN_WORKERS` | `4` | Number of Gunicorn workers |
 | `GUNICORN_TIMEOUT` | `30` | Gunicorn timeout |
+
+### Database Admin Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_DATABASE_ADMIN` | `false` | Enable Adminer database management |
+| `ADMINER_USERNAME` | `admin` | Adminer HTTP Basic Auth username |
+| `ADMINER_PASSWORD` | `password` | Adminer HTTP Basic Auth password |
+| `ADMINER_DEFAULT_SERVER` | `db` | Default database server |
+| `ADMINER_DEFAULT_USER` | `${POSTGRES_USER}` | Default database username |
+| `ADMINER_DEFAULT_PASSWORD` | `${POSTGRES_PASSWORD}` | Default database password |
+| `ADMINER_DEFAULT_DB` | `${POSTGRES_DB}` | Default database name |
+| `ADMINER_DESIGN` | `nette` | Adminer UI theme |
 
 ## 🛠️ Service Configuration
 

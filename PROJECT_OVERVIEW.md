@@ -15,7 +15,8 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │   Nginx     │  │ Monitoring  │  │   Backup    │         │
 │  │  (Reverse   │  │   Dashboard │  │   System    │         │
-│  │   Proxy)    │  │             │  │             │         │
+│  │   Proxy +   │  │  + Adminer  │  │             │         │
+│  │   SSL/TLS)  │  │   Status     │  │             │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
@@ -37,17 +38,27 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Supabase   │  │ OpenWebUI   │  │   (Future   │         │
-│  │  (Backend   │  │  (LLM Web   │  │   Services) │         │
-│  │   Services) │  │   Interface)│  │             │         │
+│  │  Supabase   │  │ OpenWebUI   │  │   Adminer   │         │
+│  │  (Backend   │  │  (LLM Web   │  │  (DB Admin  │         │
+│  │   Services) │  │   Interface)│  │   Tool)     │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐                                             │
+│  │Ollama WebUI │                                             │
+│  │  (Model     │                                             │
+│  │ Management) │                                             │
+│  └─────────────┘                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Network Architecture
+### Security Architecture
 
-- **Internal Network**: `ai-stack` - Secure service-to-service communication
-- **External Access**: Nginx reverse proxy with SSL/TLS termination
+- **Zero Direct Access**: All services protected behind Nginx reverse proxy
+- **SSL/TLS Encryption**: All external connections encrypted
+- **HTTP Basic Auth**: Multi-service authentication with individual credentials
+- **Rate Limiting**: DDoS protection and abuse prevention
+- **Security Headers**: XSS, CSRF, and injection protection
+- **Network Segmentation**: Internal Docker networks isolate services
 - **Service Discovery**: DNS-based service resolution within Docker network
 - **Load Balancing**: Nginx handles request routing and load distribution
 

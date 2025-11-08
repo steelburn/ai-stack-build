@@ -74,6 +74,7 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 ### 🤖 AI Core Services
 - **[Dify](https://dify.ai)**: Open-source LLM application development platform
 - **[Ollama](https://ollama.ai)**: Local LLM runner with model management
+- **[Ollama WebUI](https://github.com/ollama-webui/ollama-webui)**: Web interface for Ollama model management
 - **[LiteLLM](https://litellm.ai)**: LLM API proxy and load balancer
 - **[OpenWebUI](https://openwebui.com)**: Modern web interface for LLMs
 - **[Mem0](https://mem0.ai)**: AI memory and context management
@@ -87,6 +88,7 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 - **[PostgreSQL](https://postgresql.org)**: Relational database
 - **[Redis](https://redis.io)**: Cache and session store
 - **[Supabase](https://supabase.com)**: Open-source Firebase alternative
+- **[Adminer](https://www.adminer.org)**: Web-based database management (optional)
 
 ### 📊 Monitoring & Security
 - **Monitoring Dashboard**: Comprehensive health, resource, and log monitoring
@@ -118,12 +120,16 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 - **Redis Encryption**: Password-protected Redis connections
 - **Self-signed Certificates**: Development-ready (replace with CA certs for production)
 
-### 📝 Monitoring & Logging
+### � Monitoring & Observability
 - **Security Logging**: Comprehensive audit logs with rotation
-- **Health Monitoring**: Real-time service health checks
+- **Health Monitoring**: Real-time service health checks with visual dashboards
 - **Resource Monitoring**: CPU, memory, network, and disk usage tracking
-- **Log Aggregation**: Centralized container log viewing
+- **Log Aggregation**: Centralized container log viewing with filtering
 - **Access Logging**: Detailed security audit trails
+- **Prometheus Metrics**: Standard metrics endpoint for external monitoring
+- **Alerting System**: Automated alerts for service failures and high resource usage
+- **Historical Trends**: Metrics history and trend analysis with charts
+- **Request Tracing**: Performance monitoring and request duration tracking
 
 ## 📋 Prerequisites
 
@@ -184,6 +190,10 @@ make up
 
 ### 6. Access Services
 - **Monitoring Dashboard**: https://localhost/monitoring/
+- **Resource Monitor**: https://localhost/monitoring/resources
+- **Alert Dashboard**: https://localhost/monitoring/alerts
+- **Metrics Trends**: https://localhost/monitoring/trends
+- **Prometheus Metrics**: https://localhost/monitoring/metrics
 - **Dify**: https://localhost/dify/
 - **OpenWebUI**: https://localhost/openwebui/
 - **N8N**: https://localhost/n8n/
@@ -314,35 +324,34 @@ SERVICE_2_URL=http://another-service:3000/health
 
 ## 🌐 Service Access
 
-### Web Interfaces (via Nginx Reverse Proxy)
-| Service | URL | Authentication |
-|---------|-----|----------------|
-| **Monitoring Dashboard** | https://localhost/monitoring/ | Required |
-| **Dify** | https://localhost/dify/ | Via Dify |
-| **OpenWebUI** | https://localhost/openwebui/ | Required |
-| **N8N** | https://localhost/n8n/ | Required |
-| **Flowise** | https://localhost/flowise/ | Required |
-| **LiteLLM Dashboard** | https://localhost/litellm/ui/ | Via LiteLLM |
+### 🔒 Secure Web Interfaces (via Nginx Reverse Proxy - SSL/TLS Protected)
+| Service | URL | Authentication | Notes |
+|---------|-----|----------------|--------|
+| **Monitoring Dashboard** | https://localhost/monitoring/ | HTTP Basic Auth | Service health & resources |
+| **Dify** | https://localhost/dify/ | Via Dify | LLM application platform |
+| **OpenWebUI** | https://localhost/openwebui/ | Built-in Auth | Web interface for LLMs |
+| **Ollama WebUI** | https://localhost/ollama-webui/ | None | Model management interface |
+| **N8N** | https://localhost/n8n/ | HTTP Basic Auth | Workflow automation |
+| **Flowise** | https://localhost/flowise/ | Built-in Auth | AI workflow builder |
+| **LiteLLM Dashboard** | https://localhost/litellm/ui/ | API Key | LLM proxy management |
+| **Database Admin (Adminer)** | https://localhost/adminer/ | HTTP Basic Auth | PostgreSQL management (when enabled) |
 
-### Direct Access (bypassing reverse proxy)
-| Service | URL | Port |
-|---------|-----|------|
-| Dify API | http://localhost:8080 | 8080 |
-| Dify Web | http://localhost:3000 | 3000 |
-| Ollama API | http://localhost:11434 | 11434 |
-| LiteLLM API | http://localhost:4000 | 4000 |
-| Mem0 API | http://localhost:8000 | 8000 |
-| N8N | http://localhost:5678 | 5678 |
-| Flowise | http://localhost:3001 | 3001 |
-| OpenWebUI | http://localhost:3002 | 3002 |
-| Qdrant | http://localhost:6333 | 6333 |
-| Monitoring | http://localhost:8080 | 8080 |
+### 🔑 Secure API Endpoints (via Nginx Reverse Proxy)
+| Service | Endpoint | Authentication |
+|---------|----------|----------------|
+| **Ollama API** | https://localhost/ollama/api/generate | None |
+| **LiteLLM API** | https://localhost/litellm/chat/completions | API Key |
+| **Mem0 API** | https://localhost/mem0/v1/memories/ | None |
 
-### API Endpoints
-- **Ollama**: `http://localhost:11434/api/generate`
-- **LiteLLM**: `http://localhost:4000/chat/completions`
-- **Qdrant**: `http://localhost:6333/collections`
-- **Mem0**: `http://localhost:8000/v1/memories/`
+### 🏠 Internal Services (Docker Network Only)
+| Service | Purpose | Access |
+|---------|---------|--------|
+| **Qdrant** | Vector Database | Internal services only |
+| **PostgreSQL** | Primary Database | Internal services only |
+| **Redis** | Cache & Sessions | Internal services only |
+| **Supabase** | Alternative Database | Internal services only |
+
+> **Security Note**: All user-facing services are protected behind the Nginx reverse proxy with SSL/TLS encryption, rate limiting, and security headers. Direct port access has been removed for security.
 
 ## 🔐 Security Configuration
 
@@ -392,6 +401,49 @@ SERVICE_2_URL=http://another-service:3000/health
 | N8N | HTTP Basic | `.env` (N8N_BASIC_*) |
 | Flowise | Built-in | `.env` (FLOWISE_*) |
 | LiteLLM | API Key | `.env` (LITELLM_MASTER_KEY) |
+| Database Admin (Adminer) | HTTP Basic | `.env` (ADMINER_*) |
+
+### 🗄️ Database Administration
+
+The stack includes optional web-based database management via Adminer. This feature is **disabled by default** for security reasons.
+
+#### Enabling Database Admin
+
+1. **Set Environment Variables**
+   ```bash
+   # Edit .env file
+   ENABLE_DATABASE_ADMIN=true
+   ADMINER_USERNAME=your-db-admin-user
+   ADMINER_PASSWORD=your-secure-db-admin-password
+   ```
+
+2. **Start with Database Admin Profile**
+   ```bash
+   # Start all services including database admin
+   docker-compose --profile db-admin up -d
+
+   # Or use the Makefile
+   make up-db-admin
+   ```
+
+3. **Access Database Admin**
+   - URL: `https://localhost/adminer/`
+   - **Authentication Required**: Use the `ADMINER_USERNAME` and `ADMINER_PASSWORD` you configured
+   - **Auto-Connection**: Adminer will automatically connect to the PostgreSQL database with your configured credentials
+   - System: PostgreSQL (pre-selected)
+   - Server: `db` (pre-filled)
+   - Username: Your `POSTGRES_USER` (pre-filled)
+   - Password: Your `POSTGRES_PASSWORD` (pre-filled)
+   - Database: Your `POSTGRES_DB` (pre-filled)
+
+#### Security Considerations
+
+- **Database admin is only accessible when explicitly enabled**
+- **HTTP Basic Authentication required** for all access
+- **Pre-configured connection** eliminates manual entry of credentials
+- **Only enable in development/staging environments**
+- **Use strong passwords** for both Adminer auth and database access
+- **Monitor access logs** when enabled
 
 ## 🛠️ Makefile Commands
 
