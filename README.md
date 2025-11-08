@@ -331,6 +331,7 @@ SERVICE_2_URL=http://another-service:3000/health
 | Dify Web | http://localhost:3000 | 3000 |
 | Ollama API | http://localhost:11434 | 11434 |
 | LiteLLM API | http://localhost:4000 | 4000 |
+| Mem0 API | http://localhost:8000 | 8000 |
 | N8N | http://localhost:5678 | 5678 |
 | Flowise | http://localhost:3001 | 3001 |
 | OpenWebUI | http://localhost:3002 | 3002 |
