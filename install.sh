@@ -182,6 +182,30 @@ generate_secrets() {
     fi
 }
 
+# Ensure memory overcommit is enabled for Redis
+enable_memory_overcommit() {
+    log_info "Configuring memory overcommit for Redis..."
+
+    # Check current overcommit setting
+    local current_setting
+    current_setting=$(sysctl vm.overcommit_memory | awk '{print $3}')
+
+    if [ "$current_setting" -ne 1 ]; then
+        log_info "Enabling memory overcommit (current setting: $current_setting)..."
+        sudo sysctl -w vm.overcommit_memory=1
+
+        # Make the change persistent
+        if ! grep -q '^vm.overcommit_memory=1' /etc/sysctl.conf; then
+            echo 'vm.overcommit_memory=1' | sudo tee -a /etc/sysctl.conf
+            log_success "Memory overcommit enabled and set to persist across reboots."
+        else
+            log_success "Memory overcommit enabled."
+        fi
+    else
+        log_info "Memory overcommit is already enabled (current setting: $current_setting)."
+    fi
+}
+
 # Setup Docker services
 setup_services() {
     log_info "Setting up Docker services..."
@@ -340,10 +364,13 @@ main() {
     log_info "Step 5: Generating secrets..."
     generate_secrets
 
-    log_info "Step 6: Starting services..."
+    log_info "Step 6: Enabling memory overcommit for Redis..."
+    enable_memory_overcommit
+
+    log_info "Step 7: Starting services..."
     start_services
 
-    log_info "Step 7: Installation complete!"
+    log_info "Step 8: Installation complete!"
     show_completion
 
     echo

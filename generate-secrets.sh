@@ -40,6 +40,7 @@ N8N_ENCRYPTION_KEY=$(generate_api_key)
 FLOWISE_SECRETKEY=$(generate_api_key)
 OPENWEBUI_SECRET_KEY=$(generate_api_key)
 OPENAI_API_KEY="sk-$(generate_api_key)"  # Placeholder - user should set real key
+UI_PASSWORD=$(generate_password)
 
 # Create secrets directory
 echo "Creating secrets directory..."
@@ -53,12 +54,14 @@ echo -n "$QDRANT_API_KEY" > secrets/qdrant_api_key.txt
 echo -n "$LITELLM_MASTER_KEY" > secrets/litellm_master_key.txt
 echo -n "$LITELLM_SALT_KEY" > secrets/litellm_salt_key.txt
 echo -n "$N8N_ENCRYPTION_KEY" > secrets/n8n_encryption_key.txt
-echo -n "$FLOWISE_SECRETKEY" > secrets/flowise_secret_key.txt
+echo -n "$FLOWWISE_SECRETKEY" > secrets/flowise_secret_key.txt
 echo -n "$OPENWEBUI_SECRET_KEY" > secrets/openwebui_secret_key.txt
 
 # Create monitoring credentials (these are not auto-generated, use defaults or prompt user)
 echo -n "${MONITORING_USERNAME:-admin}" > secrets/monitoring_username.txt
 echo -n "${MONITORING_PASSWORD:-$(generate_password)}" > secrets/monitoring_password.txt
+echo -n "${UI_USERNAME:-admin}" > secrets/ui_username.txt
+echo -n "${UI_PASSWORD:-$LITELLM_MASTER_KEY}" > secrets/ui_password.txt
 
 # Update .env file
 echo "Updating .env file with secure secrets..."
@@ -72,6 +75,8 @@ sed -i "s/N8N_ENCRYPTION_KEY=.*/N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY/" .env
 sed -i "s/FLOWISE_SECRETKEY=.*/FLOWISE_SECRETKEY=$FLOWISE_SECRETKEY/" .env
 sed -i "s/OPENWEBUI_SECRET_KEY=.*/OPENWEBUI_SECRET_KEY=$OPENWEBUI_SECRET_KEY/" .env
 sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=$OPENAI_API_KEY/" .env
+sed -i "s/UI_USERNAME=.*/UI_USERNAME=admin/" .env
+sed -i "s/UI_PASSWORD=.*/UI_PASSWORD=$LITELLM_MASTER_KEY/" .env
 
 # Update DATABASE_URL in .env
 DATABASE_URL="postgresql://postgres:$DB_PASSWORD@db:5432/dify"
@@ -99,3 +104,4 @@ echo "LiteLLM Master Key: $LITELLM_MASTER_KEY"
 echo "N8N Encryption Key: $N8N_ENCRYPTION_KEY"
 echo "Flowise Secret Key: $FLOWISE_SECRETKEY"
 echo "OpenWebUI Secret Key: $OPENWEBUI_SECRET_KEY"
+echo "UI Password: $UI_PASSWORD"

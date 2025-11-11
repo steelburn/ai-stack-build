@@ -3,6 +3,7 @@
 Prometheus metrics setup and configuration.
 """
 import threading
+from prometheus_client import generate_latest
 
 try:
     from prometheus_client import Counter, Gauge, Histogram
@@ -34,11 +35,6 @@ except ImportError:
         def observe(self, value):
             pass
 
-    def generate_latest():
-        return b"# Prometheus metrics not available"
-
-    CONTENT_TYPE_LATEST = 'text/plain; version=0.0.4; charset=utf-8'
-
 # Prometheus Metrics
 # Service health metrics
 service_up = Gauge('ai_stack_service_up', 'Service health status (1=up, 0=down)', ['service'])
@@ -64,3 +60,9 @@ http_request_duration = Histogram('ai_stack_http_request_duration_seconds', 'HTT
 METRICS_HISTORY = {}
 HISTORY_MAX_POINTS = 100  # Keep last 100 data points
 history_lock = threading.Lock()
+
+# Ensure CONTENT_TYPE_LATEST is defined
+CONTENT_TYPE_LATEST = 'text/plain; version=0.0.4; charset=utf-8'
+
+# Explicitly expose generate_latest and CONTENT_TYPE_LATEST
+__all__ = ['generate_latest', 'CONTENT_TYPE_LATEST', 'service_up', 'service_response_time', 'container_cpu_percent', 'container_memory_percent', 'container_memory_usage']

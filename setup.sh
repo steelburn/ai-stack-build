@@ -142,7 +142,7 @@ update_nginx_port() {
 
     if [ -f "nginx/nginx.conf" ]; then
         sed -i "s/$service:$old_port/$service:$new_port/g" nginx/nginx.conf
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Updated $service port from $old_port to $new_port in nginx.conf" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S")] [INFO] Updated $service port from $old_port to $new_port in nginx.conf" >> "$LOG_FILE"
     fi
 }
 
@@ -245,6 +245,14 @@ echo "✅ .env file ready"
 # Pull images
 echo "📦 Pulling Docker images..."
 docker compose pull
+
+# Ensure memory overcommit is enabled for Redis
+sudo sysctl -w vm.overcommit_memory=1
+
+# Make the change persistent
+if ! grep -q '^vm.overcommit_memory=1' /etc/sysctl.conf; then
+  echo 'vm.overcommit_memory=1' | sudo tee -a /etc/sysctl.conf
+fi
 
 echo "✅ Setup complete!"
 echo ""

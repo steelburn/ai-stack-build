@@ -231,6 +231,8 @@ EMAIL=admin@yourdomain.com
 # Security
 MONITORING_USERNAME=admin
 MONITORING_PASSWORD=your-secure-password-here
+UI_USERNAME=admin
+UI_PASSWORD=your-secure-password
 
 # SSL
 SSL_CERT_PATH=/etc/letsencrypt/live/yourdomain.com/fullchain.pem
@@ -912,5 +914,4 @@ docker system prune -a --volumes
 
 ---
 
-**Happy Deploying! 🚀**</content>
-<parameter name="filePath">/home/steelburn/Development/ai-stack-build/DEPLOYMENT_GUIDE.md
+**Happy Deploying! 🚀**

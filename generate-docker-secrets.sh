@@ -26,6 +26,8 @@ echo "$(get_env_value 'FLOWISE_SECRETKEY')" > "$SECRETS_DIR/flowise_secret_key.t
 echo "$(get_env_value 'OPENWEBUI_SECRET_KEY')" > "$SECRETS_DIR/openwebui_secret_key.txt"
 echo "$(get_env_value 'MONITORING_USERNAME')" > "$SECRETS_DIR/monitoring_username.txt"
 echo "$(get_env_value 'MONITORING_PASSWORD')" > "$SECRETS_DIR/monitoring_password.txt"
+echo "$(get_env_value 'UI_USERNAME')" > "$SECRETS_DIR/ui_username.txt"
+echo "$(get_env_value 'UI_PASSWORD')" > "$SECRETS_DIR/ui_password.txt"
 
 # Set proper permissions
 chmod 600 "$SECRETS_DIR"/*.txt

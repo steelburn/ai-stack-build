@@ -425,7 +425,7 @@ SERVICE_2_URL=http://another-service:3000/health
 | OpenWebUI | Built-in | `.env` (WEBUI_AUTH_*) |
 | N8N | HTTP Basic | `.env` (N8N_BASIC_*) |
 | Flowise | Built-in | `.env` (FLOWISE_*) |
-| LiteLLM | API Key | `.env` (LITELLM_MASTER_KEY) |
+| LiteLLM | HTTP Basic | `.env` (UI_USERNAME/UI_PASSWORD) |
 | Database Admin (Adminer) | HTTP Basic | `.env` (ADMINER_*) |
 
 ### 🗄️ Database Administration

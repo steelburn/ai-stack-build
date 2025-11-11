@@ -73,6 +73,8 @@ This document provides comprehensive reference for all configuration options, en
 | `LITELLM_SALT_KEY` | `salt-key-1234` | Salt key for encryption |
 | `DATABASE_URL` | `postgresql://...` | Database connection URL |
 | `LITELLM_PORT` | `4000` | LiteLLM service port |
+| `UI_USERNAME` | `admin` | Username for LiteLLM UI |
+| `UI_PASSWORD` | `your-secure-password` | Password for LiteLLM UI |
 
 ### OpenMemory Configuration
 
@@ -686,5 +688,4 @@ docker-compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 - [Dify Documentation](https://docs.dify.ai)
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 
-For service-specific configuration options, refer to the individual service documentation linked above.</content>
-<parameter name="filePath">/home/steelburn/Development/ai-stack-build/CONFIGURATION_REFERENCE.md
+For service-specific configuration options, refer to the individual service documentation linked above.

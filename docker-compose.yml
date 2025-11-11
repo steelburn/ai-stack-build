@@ -133,6 +133,9 @@ services:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      LITELLM_MASTER_KEY: "$(cat /run/secrets/litellm_master_key)"
+      UI_USERNAME: ${UI_USERNAME}
+      UI_PASSWORD: ${UI_PASSWORD}
     secrets:
       - litellm_master_key
       - litellm_salt_key
@@ -229,6 +232,9 @@ services:
 
   # === DIFY API ===
   dify-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dify-api
     image: langgenius/dify-api:1.9.2
     restart: always
     environment:
@@ -268,8 +274,13 @@ services:
 
   # === DIFY WORKER ===
   dify-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dify-worker
     image: langgenius/dify-api:1.9.2
     restart: always
+    user: "1000:1000"  # Run as non-root user
+    privileged: true  # Temporarily allow elevated privileges for debugging
     environment:
       MODE: worker
       CONSOLE_API_URL: ${CONSOLE_API_URL}
@@ -293,6 +304,10 @@ services:
       QDRANT_API_KEY: ${QDRANT_API_KEY}
       STORAGE_TYPE: ${STORAGE_TYPE}
       STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH}
+      CELERY_BROKER_URL: "amqp://guest:guest@rabbitmq:5672//"
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+      CELERY_RESULT_BACKEND: redis://redis:6379/0  # Ensure Celery uses Redis as the result backend
     depends_on:
       db:
         condition: service_healthy
@@ -331,6 +346,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - nginx_config:/etc/nginx/upstreams
+      - ./monitoring/modules:/app/modules
     networks:
       - ai-stack
 
@@ -349,6 +365,24 @@ services:
         condition: service_started
     volumes:
       - nginx_config:/etc/nginx/conf.d/upstreams
+    networks:
+      - ai-stack
+
+  # === RABBITMQ ===
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq_ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - ai-stack
 

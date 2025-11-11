@@ -22,7 +22,7 @@ except ImportError:
 
 import threading
 try:
-    from prometheus_client import Gauge
+    from prometheus_client import Gauge, REGISTRY
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
@@ -38,9 +38,15 @@ from .config import SERVICES, SERVICE_STATES, LAST_NGINX_RELOAD, NGINX_RELOAD_CO
 from .metrics import history_lock
 from .docker_utils import get_docker_client
 
+def get_or_create_gauge(name, documentation, labelnames):
+    for collector in REGISTRY._collector_to_names:
+        if name in REGISTRY._collector_to_names[collector]:
+            return collector
+    return Gauge(name, documentation, labelnames)
+
 # Prometheus Metrics
-service_up = Gauge('ai_stack_service_up', 'Service health status (1=up, 0=down)', ['service'])
-service_response_time = Gauge('ai_stack_service_response_time_ms', 'Service response time in milliseconds', ['service'])
+service_up = get_or_create_gauge('ai_stack_service_up', 'Service health status (1=up, 0=down)', ['service'])
+service_response_time = get_or_create_gauge('ai_stack_service_response_time_ms', 'Service response time in milliseconds', ['service'])
 
 def check_service(url, name):
     """Check service health by making HTTP request"""
