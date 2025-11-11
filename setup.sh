@@ -142,7 +142,7 @@ update_nginx_port() {
 
     if [ -f "nginx/nginx.conf" ]; then
         sed -i "s/$service:$old_port/$service:$new_port/g" nginx/nginx.conf
-        echo "[$(date '+%Y-%m-%d %H:%M:%S")] [INFO] Updated $service port from $old_port to $new_port in nginx.conf" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Updated $service port from $old_port to $new_port in nginx.conf" >> "$LOG_FILE"
     fi
 }
 
