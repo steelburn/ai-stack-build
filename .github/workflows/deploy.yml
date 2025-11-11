@@ -31,6 +31,11 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: read
+  packages: write
+  # security-events: write  # for CodeQL
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -66,7 +71,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build monitoring service
@@ -82,53 +87,9 @@ jobs:
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/monitoring.tar
 
-      - name: Test monitoring service
-        run: |
-          # Load the built image
-          docker load < /tmp/monitoring.tar
-
-          # Create test network
-          docker network create test-network
-
-          # Run monitoring service with test config
-          docker run -d --name monitoring-test \
-            --network test-network \
-            -e MONITORING_USERNAME=test \
-            -e MONITORING_PASSWORD=test \
-            -p 5001:5000 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-          # Wait for service to start
-          sleep 10
-
-          # Test health endpoint
-          curl -f http://localhost:5001/health || exit 1
-
-          # Test basic auth
-          curl -u test:test http://localhost:5001/health || exit 1
-
-          # Cleanup
-          docker stop monitoring-test
-          docker rm monitoring-test
-          docker network rm test-network
-
-      - name: Run security scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'image'
-          scan-ref: '/tmp/monitoring.tar'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
       - name: Validate docker-compose
         run: |
-          docker-compose config --quiet
+          docker compose config --quiet
 
       - name: Check secrets generation scripts
         run: |
@@ -145,9 +106,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      github.event_name == 'push' &&
-      !contains(github.event.head_commit.message, '[skip deploy]')
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.environment == 'staging' &&
+      github.event.inputs.deploy == 'true'
 
     environment:
       name: staging

@@ -133,6 +133,86 @@ make check-ports
    docker-compose ps db
    ```
 
+### Redis Configuration Issues
+
+**Symptoms:**
+- Redis service shows "Restarting" status
+- Error: `Bad directive or wrong number of arguments` for `requirepassfile`
+- Services fail to connect to Redis
+
+**Root Cause:**
+- `requirepassfile` directive only available in Redis 7.0+
+- Using Redis 6.x with incompatible configuration
+
+**Solutions:**
+
+1. **Fix Redis Command (Redis 6.x)**
+   ```bash
+   # Update docker-compose.yml command
+   services:
+     redis:
+       command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+   ```
+
+2. **Alternative: Upgrade Redis**
+   ```yaml
+   services:
+     redis:
+       image: redis:7-alpine  # Upgrade to Redis 7
+       command: redis-server --requirepassfile /run/secrets/redis_password
+   ```
+
+3. **Verify Redis Connection**
+   ```bash
+   # Test Redis connectivity
+   docker-compose exec redis redis-cli ping
+
+   # Test with password
+   docker-compose exec redis redis-cli -a "$(cat secrets/redis_password)" ping
+   ```
+
+### Dify Storage Configuration Issues
+
+**Symptoms:**
+- Dify worker fails with `ConfigInvalid: ConfigInvalid (permanent) at => root is not specified`
+- Dify API shows storage-related errors
+- File uploads fail in Dify
+
+**Root Cause:**
+- Missing storage configuration environment variables
+- OpenDAL storage backend not properly configured
+
+**Solutions:**
+
+1. **Add Storage Variables**
+   ```bash
+   # Add to .env file
+   STORAGE_TYPE=local
+   STORAGE_LOCAL_PATH=/app/api/storage
+   ```
+
+2. **Update Docker Compose**
+   ```yaml
+   services:
+     dify-api:
+       environment:
+         - STORAGE_TYPE=${STORAGE_TYPE}
+         - STORAGE_LOCAL_PATH=${STORAGE_LOCAL_PATH}
+     dify-worker:
+       environment:
+         - STORAGE_TYPE=${STORAGE_TYPE}
+         - STORAGE_LOCAL_PATH=${STORAGE_LOCAL_PATH}
+   ```
+
+3. **Verify Storage Directory**
+   ```bash
+   # Check storage volume
+   docker-compose exec dify-api ls -la /app/api/storage/
+
+   # Restart Dify services
+   docker-compose restart dify-api dify-worker
+   ```
+
 ### Dependency Issues
 
 **Symptoms:**
@@ -165,6 +245,48 @@ make check-ports
 
    # Clean system
    docker system prune -f
+   ```
+
+### Private Registry Image Issues
+
+**Note:** All services in this stack now use public registry images. If you encounter private registry issues, they may be from custom modifications.
+
+**Symptoms (if using modified/custom images):**
+- `pull access denied` errors during `docker-compose up`
+- Services fail to start with image pull failures
+- Error: `denied: requested access to the resource is denied`
+
+**Solutions:**
+
+1. **Authenticate with Private Registry**
+   ```bash
+   # Login to the registry
+   docker login
+
+   # Or login to specific registry
+   docker login your-registry.com
+   ```
+
+2. **Use Alternative Image**
+   ```bash
+   # Option 1: Skip problematic service
+   docker-compose up --scale service-name=0
+
+   # Option 2: Use environment variable override
+   PROBLEMATIC_IMAGE=your-public/alternative:latest docker-compose up
+
+   # Option 3: Edit docker-compose.yml to use alternative
+   # Change: image: private-registry/image:latest
+   # To: image: public-registry/image:latest
+   ```
+
+3. **Check Registry Access**
+   ```bash
+   # Test image access
+   docker pull your-image:latest
+
+   # Check authentication
+   docker login --username your-username your-registry.com
    ```
 
 ## 🌐 Network & Connectivity Issues
@@ -822,23 +944,24 @@ make up
 ### Emergency Access
 
 ```bash
-# Bypass authentication (temporary)
-docker-compose exec monitoring sed -i 's/@requires_auth//' app.py
-docker-compose restart monitoring
+# Bypass authentication (temporary - monitoring only)
+docker compose exec monitoring sed -i 's/@requires_auth//' app.py
+docker compose restart monitoring
 
-# Direct database access
-docker-compose exec db psql -U postgres -d dify
+# Direct database access (internal only)
+docker compose exec db psql -U postgres -d dify
 
-# Direct service access
-# Use internal ports: http://localhost:8080 (monitoring), etc.
+# Service access through reverse proxy
+# All services accessible via: https://localhost/{service}/
+# Example: https://localhost/monitoring/, https://localhost/dify/, etc.
 ```
 
 ### Log Preservation
 
 ```bash
 # Save logs before reset
-docker-compose logs > emergency_logs_$(date +%Y%m%d_%H%M%S).txt
-docker-compose logs --tail=1000 > recent_logs.txt
+docker compose logs > emergency_logs_$(date +%Y%m%d_%H%M%S).txt
+docker compose logs --tail=1000 > recent_logs.txt
 
 # Save configuration
 cp .env emergency_env_backup

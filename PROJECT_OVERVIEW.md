@@ -15,7 +15,8 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │   Nginx     │  │ Monitoring  │  │   Backup    │         │
 │  │  (Reverse   │  │   Dashboard │  │   System    │         │
-│  │   Proxy)    │  │             │  │             │         │
+│  │   Proxy +   │  │  + Adminer  │  │             │         │
+│  │   SSL/TLS)  │  │   Status     │  │             │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
@@ -25,29 +26,39 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │ PostgreSQL  │  │    Redis    │  │   Weaviate  │         │
+│  │ PostgreSQL  │  │    Redis    │  │   Qdrant    │         │
 │  │  (Primary   │  │  (Cache)    │  │  (Vector    │         │
 │  │   Database) │  │             │  │   DB)       │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Chroma    │  │  Qdrant     │  │   MinIO     │         │
-│  │  (Vector    │  │  (Vector    │  │  (Object    │         │
-│  │   DB)       │  │   DB)       │  │   Storage)  │         │
+│  │ OpenMemory │  │    N8N      │  │   Flowise   │         │
+│  │  (AI Memory │  │  (Workflow  │  │  (AI Flow   │         │
+│  │   System)   │  │   Auto)     │  │   Builder)  │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   SearXNG   │  │  OpenWebUI  │  │   Langfuse  │         │
-│  │  (Search    │  │  (LLM       │  │  (LLM       │         │
-│  │   Engine)   │  │   Frontend) │  │   Tracing)  │         │
+│  │  Supabase   │  │ OpenWebUI   │  │   Adminer   │         │
+│  │  (Backend   │  │  (LLM Web   │  │  (DB Admin  │         │
+│  │   Services) │  │   Interface)│  │   Tool)     │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐                                             │
+│  │Ollama WebUI │                                             │
+│  │  (Model     │                                             │
+│  │ Management) │                                             │
+│  └─────────────┘                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Network Architecture
+### Security Architecture
 
-- **Internal Network**: `ai-stack` - Secure service-to-service communication
-- **External Access**: Nginx reverse proxy with SSL/TLS termination
+- **Zero Direct Access**: All services protected behind Nginx reverse proxy
+- **SSL/TLS Encryption**: All external connections encrypted
+- **HTTP Basic Auth**: Multi-service authentication with individual credentials
+- **Rate Limiting**: DDoS protection and abuse prevention
+- **Security Headers**: XSS, CSRF, and injection protection
+- **Network Segmentation**: Internal Docker networks isolate services
 - **Service Discovery**: DNS-based service resolution within Docker network
 - **Load Balancing**: Nginx handles request routing and load distribution
 
@@ -111,16 +122,17 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 
 | Service | Purpose | Key Features |
 |---------|---------|--------------|
-| **Dify** | AI Application Platform | Workflow orchestration, API management |
-| **Ollama** | Local LLM Server | Run LLMs locally with GPU acceleration |
-| **LiteLLM** | LLM Router | Unified API for multiple LLM providers |
-| **Weaviate** | Vector Database | Semantic search and RAG capabilities |
-| **Chroma** | Vector Database | Lightweight vector storage |
-| **Qdrant** | Vector Database | High-performance vector search |
-| **MinIO** | Object Storage | S3-compatible file storage |
-| **SearXNG** | Search Engine | Privacy-focused metasearch |
-| **OpenWebUI** | LLM Frontend | Web interface for LLM interactions |
-| **Langfuse** | LLM Tracing | Observability and analytics for LLM calls |
+| **Dify** | AI Application Platform | Complete AI workflow orchestration with API management |
+| **Ollama** | Local LLM Server | Run LLMs locally with GPU acceleration support |
+| **LiteLLM** | LLM Router | Unified API for multiple LLM providers with load balancing |
+| **Qdrant** | Vector Database | High-performance vector search and similarity matching |
+| **OpenMemory** | AI Memory System | Persistent memory and context for AI applications |
+| **N8N** | Workflow Automation | Open-source workflow automation and integration platform |
+| **Flowise** | AI Workflow Builder | Visual drag-and-drop AI workflow creation |
+| **Supabase** | Backend-as-a-Service | Open-source Firebase alternative with real-time features |
+| **OpenWebUI** | LLM Frontend | Modern web interface for LLM interactions |
+| **PostgreSQL** | Primary Database | Robust relational database for application data |
+| **Redis** | Cache & Session Store | High-performance caching and session management |
 
 ## 📊 Service Configuration
 
@@ -128,18 +140,19 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 
 | Service | Internal Port | External URL | Purpose |
 |---------|---------------|--------------|---------|
-| **Nginx** | 80/443 | `https://localhost` | Main entry point |
-| **Monitoring** | 5000 | `https://localhost/monitoring` | Health dashboard |
-| **Dify** | 80 | `https://localhost/dify` | AI platform |
-| **Ollama** | 11434 | `https://localhost/ollama` | LLM server |
-| **LiteLLM** | 4000 | `https://localhost/litellm` | LLM router |
-| **Weaviate** | 8080 | `https://localhost/weaviate` | Vector DB |
-| **Chroma** | 8000 | `https://localhost/chroma` | Vector DB |
-| **Qdrant** | 6333 | `https://localhost/qdrant` | Vector DB |
-| **MinIO** | 9000/9001 | `https://localhost/minio` | Object storage |
-| **SearXNG** | 8080 | `https://localhost/searxng` | Search engine |
-| **OpenWebUI** | 8080 | `https://localhost/openwebui` | LLM interface |
-| **Langfuse** | 3000 | `https://localhost/langfuse` | LLM tracing |
+| **Nginx** | 80/443 | `https://localhost` | Main entry point & reverse proxy |
+| **Monitoring** | 8080 | `https://localhost/monitoring` | Health dashboard |
+| **Dify Web** | 3000 | `https://localhost/dify` | AI platform interface |
+| **Ollama** | 11434 | `https://localhost/ollama` | LLM server API |
+| **LiteLLM** | 4000 | `https://localhost/litellm` | LLM router API |
+| **Qdrant** | 6333/6334 | `https://localhost/qdrant` | Vector database |
+| **OpenMemory** | 8765 | `https://localhost/openmemory` | AI memory system |
+| **N8N** | 5678 | `https://localhost/n8n` | Workflow automation |
+| **Flowise** | 3001 | `https://localhost/flowise` | AI workflow builder |
+| **Supabase** | 54322 | `https://localhost/supabase` | Backend services |
+| **OpenWebUI** | 3002 | `https://localhost/openwebui` | LLM web interface |
+| **PostgreSQL** | 5432 | Internal only | Primary database |
+| **Redis** | 6379 | Internal only | Cache & sessions |
 
 ### Resource Requirements
 
@@ -159,8 +172,27 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 - **Network**: Internet access for downloading images
 - **Storage**: 100GB+ free disk space
 
-### One-Command Setup
+### ⚡ One-Line Installation (Recommended)
 
+Get the complete AI Stack Build running instantly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/steelburn/ai-stack-build/main/install.sh | bash
+```
+
+This automated installer provides:
+- 🔍 **System Compatibility Check** - Verifies Docker, Git, and system requirements
+- 📦 **Complete Setup** - Downloads, configures, and starts all services
+- 🔐 **Security First** - Generates secure credentials and certificates
+- 📊 **Ready to Use** - Monitoring dashboard available immediately
+
+**Installation Location**: `~/ai-stack-build`
+
+### 🛠️ Traditional Setup
+
+For manual installation or development environments:
+
+#### One-Command Setup
 ```bash
 # Clone and setup
 git clone <repository-url>
@@ -176,7 +208,7 @@ make up
 open https://localhost/monitoring
 ```
 
-### Manual Setup Steps
+#### Manual Setup Steps
 
 1. **Clone Repository**
    ```bash
@@ -447,5 +479,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Last updated: December 2024 | Version: 1.0.0 | AI Stack Build*</content>
+*Last updated: November 2025 | Version: 1.0.0 | AI Stack Build*</content>
 <parameter name="filePath">/home/steelburn/Development/ai-stack-build/PROJECT_OVERVIEW.md

@@ -5,7 +5,19 @@
 
 set -e
 
+# Error logging setup
+LOG_FILE="${HOME}/ai-stack-install.log"
+exec 2>>"$LOG_FILE"  # Redirect stderr to log file
+
+# Error handling
+error_handler() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Secret generation failed at line $LINENO with exit code $? - Check log file: $LOG_FILE" >> "$LOG_FILE"
+    exit 1
+}
+trap error_handler ERR
+
 echo "🔐 Generating secure secrets for AI Stack..."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Secret generation started" >> "$LOG_FILE"
 
 # Function to generate a secure password
 generate_password() {
@@ -29,6 +41,25 @@ FLOWISE_SECRETKEY=$(generate_api_key)
 OPENWEBUI_SECRET_KEY=$(generate_api_key)
 OPENAI_API_KEY="sk-$(generate_api_key)"  # Placeholder - user should set real key
 
+# Create secrets directory
+echo "Creating secrets directory..."
+mkdir -p secrets
+
+# Create individual secret files for Docker
+echo "Creating Docker secret files..."
+echo -n "$DB_PASSWORD" > secrets/db_password.txt
+echo -n "$REDIS_PASSWORD" > secrets/redis_password.txt
+echo -n "$QDRANT_API_KEY" > secrets/qdrant_api_key.txt
+echo -n "$LITELLM_MASTER_KEY" > secrets/litellm_master_key.txt
+echo -n "$LITELLM_SALT_KEY" > secrets/litellm_salt_key.txt
+echo -n "$N8N_ENCRYPTION_KEY" > secrets/n8n_encryption_key.txt
+echo -n "$FLOWISE_SECRETKEY" > secrets/flowise_secret_key.txt
+echo -n "$OPENWEBUI_SECRET_KEY" > secrets/openwebui_secret_key.txt
+
+# Create monitoring credentials (these are not auto-generated, use defaults or prompt user)
+echo -n "${MONITORING_USERNAME:-admin}" > secrets/monitoring_username.txt
+echo -n "${MONITORING_PASSWORD:-$(generate_password)}" > secrets/monitoring_password.txt
+
 # Update .env file
 echo "Updating .env file with secure secrets..."
 sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$DB_PASSWORD/" .env
@@ -46,17 +77,19 @@ sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=$OPENAI_API_KEY/" .env
 DATABASE_URL="postgresql://postgres:$DB_PASSWORD@db:5432/dify"
 sed -i "s|DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" .env
 
-# Update MEM0_DATABASE_URL
-MEM0_DATABASE_URL="postgresql://postgres:$DB_PASSWORD@db:5432/dify"
-sed -i "s|MEM0_DATABASE_URL=.*|MEM0_DATABASE_URL=$MEM0_DATABASE_URL|" .env
+# Update OPENMEMORY_DATABASE_URL
+OPENMEMORY_DATABASE_URL="postgresql://postgres:$DB_PASSWORD@db:5432/dify"
+sed -i "s|OPENMEMORY_DATABASE_URL=.*|OPENMEMORY_DATABASE_URL=$OPENMEMORY_DATABASE_URL|" .env
 
 echo "✅ Secrets generated and .env updated!"
+echo "✅ Docker secret files created in ./secrets/"
 echo ""
 echo "⚠️  IMPORTANT SECURITY NOTES:"
 echo "1. The OPENAI_API_KEY is a placeholder. Replace it with your real OpenAI API key."
 echo "2. Change default usernames and passwords in services that use them."
-echo "3. Store this .env file securely and never commit it to version control."
+echo "3. Store this .env file and ./secrets/ directory securely and never commit them to version control."
 echo "4. Consider using Docker secrets or external secret management for production."
+echo "5. The monitoring credentials are set to defaults - change them for security."
 echo ""
 echo "🔑 Generated Secrets Summary:"
 echo "Database Password: $DB_PASSWORD"

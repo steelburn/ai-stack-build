@@ -5,10 +5,22 @@
 
 set -e
 
+# Error logging setup
+LOG_FILE="${HOME}/ai-stack-install.log"
+exec 2>>"$LOG_FILE"  # Redirect stderr to log file
+
+# Error handling
+error_handler() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] SSL generation failed at line $LINENO with exit code $? - Check log file: $LOG_FILE" >> "$LOG_FILE"
+    exit 1
+}
+trap error_handler ERR
+
 CERT_DIR="./nginx/ssl"
 mkdir -p "$CERT_DIR"
 
 echo "🔐 Generating self-signed SSL certificates for development..."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] SSL certificate generation started" >> "$LOG_FILE"
 
 # Generate private key
 openssl genrsa -out "$CERT_DIR/nginx-selfsigned.key" 2048

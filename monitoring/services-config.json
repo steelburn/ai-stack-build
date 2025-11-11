@@ -15,13 +15,17 @@
     "url": "http://ollama:11434/api/version",
     "name": "Ollama"
   },
+  "ollama-webui": {
+    "url": "http://ollama-webui:8080/",
+    "name": "Ollama WebUI"
+  },
   "litellm": {
     "url": "http://litellm:4000/health",
     "name": "LiteLLM"
   },
-  "mem0": {
-    "url": "http://mem0:8000/health",
-    "name": "Mem0"
+  "openmemory": {
+    "url": "http://openmemory:8765/docs",
+    "name": "OpenMemory"
   },
   "n8n": {
     "url": "http://n8n:5678/healthz",
@@ -38,5 +42,10 @@
   "qdrant": {
     "url": "http://qdrant:6333/health",
     "name": "Qdrant"
+  },
+  "adminer": {
+    "url": "http://adminer:8080/",
+    "name": "Database Admin (Adminer)",
+    "optional": true
   }
 }

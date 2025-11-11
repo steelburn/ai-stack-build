@@ -17,8 +17,29 @@ This guide provides comprehensive deployment instructions for the AI Stack in va
 
 ## ⚡ Quick Start
 
-### One-Command Setup
+### 🚀 One-Line Installation (Fastest)
 
+Get everything set up automatically with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/steelburn/ai-stack-build/main/install.sh | bash
+```
+
+This installer handles everything:
+- ✅ System requirement checks
+- 📥 Repository setup
+- 🔧 Environment configuration
+- 🔐 Secret generation
+- 🐳 Service deployment
+- 📊 Monitoring dashboard
+
+**Installation Directory**: `~/ai-stack-build`
+
+### 🛠️ Traditional Setup
+
+For manual installation or custom configurations:
+
+#### One-Command Setup
 ```bash
 # Clone repository
 git clone <repository-url>
@@ -34,8 +55,7 @@ make up
 open https://localhost/monitoring/
 ```
 
-### Manual Setup
-
+#### Manual Setup
 ```bash
 # 1. Install dependencies
 ./setup.sh
@@ -46,7 +66,30 @@ open https://localhost/monitoring/
 ./generate-ssl.sh
 
 # 3. Start services
-docker-compose up -d
+docker compose up -d
+```
+
+**Environment Validation:**
+The setup script automatically validates that all required environment variables are present before starting services. If any variables are missing, you'll see an error message with instructions to check your `.env` file.
+
+```bash
+# Check environment configuration
+make env-check
+```
+
+### Database Admin Setup (Optional)
+
+```bash
+# Enable database management
+echo "ENABLE_DATABASE_ADMIN=true" >> .env
+echo "ADMINER_USERNAME=dbadmin" >> .env
+echo "ADMINER_PASSWORD=secure-password" >> .env
+
+# Start with database admin
+make up-db-admin
+
+# Access at: https://localhost/adminer/
+```
 
 # 4. Check status
 docker-compose ps

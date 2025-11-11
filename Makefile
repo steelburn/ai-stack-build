@@ -33,6 +33,9 @@ harden-security: ## Apply host-level security hardening (requires sudo)
 up: ## Start all services in detached mode
 	docker compose up -d
 
+up-db-admin: ## Start all services including database admin (Adminer)
+	docker compose --profile db-admin up -d
+
 start: up ## Alias for up
 
 down: ## Stop all services
@@ -160,6 +163,19 @@ env-check: ## Check environment configuration
 	@[ -f docker-compose.yml ] && echo "✓ docker-compose.yml exists" || echo "✗ docker-compose.yml missing"
 	@[ -d secrets ] && echo "✓ secrets directory exists" || echo "✗ secrets directory missing"
 	@[ -d nginx/ssl ] && echo "✓ SSL certificates directory exists" || echo "✗ SSL certificates directory missing"
+	@echo ""
+	@echo "=== Required Environment Variables ==="
+	@if [ -f .env ]; then \
+		for var in DB_HOST DB_PORT DB_USERNAME DB_PASSWORD DB_DATABASE REDIS_HOST REDIS_PORT REDIS_PASSWORD VECTOR_STORE QDRANT_URL QDRANT_API_KEY STORAGE_TYPE STORAGE_LOCAL_PATH; do \
+			if grep -q "^$$var=" .env; then \
+				echo "✓ $$var is set"; \
+			else \
+				echo "✗ $$var is missing"; \
+			fi; \
+		done; \
+	else \
+		echo "Cannot check variables: .env file missing"; \
+	fi
 
 version: ## Show versions of key components
 	@echo "=== AI Stack Versions ==="

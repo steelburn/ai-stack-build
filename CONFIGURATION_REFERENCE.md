@@ -60,6 +60,7 @@ This document provides comprehensive reference for all configuration options, en
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OLLAMA_HOST` | `http://ollama:11434` | Ollama API host |
+| `OLLAMA_WEBUI_SECRET_KEY` | `your-secret-key` | Ollama WebUI secret key |
 | `OLLAMA_MAX_MEMORY` | - | Maximum memory for Ollama (e.g., "16GB") |
 | `OLLAMA_NUM_GPU` | - | Number of GPUs to use |
 | `OLLAMA_GPU_LAYERS` | - | GPU layers for model loading |
@@ -73,14 +74,14 @@ This document provides comprehensive reference for all configuration options, en
 | `DATABASE_URL` | `postgresql://...` | Database connection URL |
 | `LITELLM_PORT` | `4000` | LiteLLM service port |
 
-### Mem0 Configuration
+### OpenMemory Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MEM0_VECTOR_STORE` | `qdrant` | Vector store for memory |
-| `MEM0_QDRANT_URL` | `http://qdrant:6333` | Qdrant URL for Mem0 |
-| `MEM0_QDRANT_API_KEY` | `difyai123456` | Qdrant API key for Mem0 |
-| `MEM0_DATABASE_URL` | `postgresql://...` | Database URL for Mem0 |
+| `OPENMEMORY_VECTOR_STORE` | `qdrant` | Vector store for memory |
+| `OPENMEMORY_QDRANT_URL` | `http://qdrant:6333` | Qdrant URL for OpenMemory |
+| `OPENMEMORY_QDRANT_API_KEY` | `difyai123456` | Qdrant API key for OpenMemory |
+| `OPENMEMORY_DATABASE_URL` | `postgresql://...` | Database URL for OpenMemory |
 | `OPENAI_API_KEY` | - | OpenAI API key (if using OpenAI) |
 
 ### N8N Configuration
@@ -133,6 +134,11 @@ This document provides comprehensive reference for all configuration options, en
 | `FILES_URL` | `http://localhost:3000` | Files service URL |
 | `INTERNAL_FILES_URL` | `http://api:5001` | Internal files URL |
 | `LOG_LEVEL` | `INFO` | Logging level |
+| `VECTOR_STORE` | `qdrant` | Vector database type |
+| `QDRANT_URL` | `http://qdrant:6333` | Qdrant service URL |
+| `QDRANT_API_KEY` | `difyai123456` | Qdrant API key |
+| `STORAGE_TYPE` | `local` | Storage backend type (local/filesystem) |
+| `STORAGE_LOCAL_PATH` | `/app/api/storage` | Local storage path for file uploads |
 | `SECRET_KEY` | - | Flask secret key |
 | `CODE_EXECUTION_ENDPOINT` | - | Code execution endpoint |
 
@@ -146,6 +152,19 @@ This document provides comprehensive reference for all configuration options, en
 | `FLASK_ENV` | `production` | Flask environment |
 | `GUNICORN_WORKERS` | `4` | Number of Gunicorn workers |
 | `GUNICORN_TIMEOUT` | `30` | Gunicorn timeout |
+
+### Database Admin Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_DATABASE_ADMIN` | `false` | Enable Adminer database management |
+| `ADMINER_USERNAME` | `admin` | Adminer HTTP Basic Auth username |
+| `ADMINER_PASSWORD` | `password` | Adminer HTTP Basic Auth password |
+| `ADMINER_DEFAULT_SERVER` | `db` | Default database server |
+| `ADMINER_DEFAULT_USER` | `${POSTGRES_USER}` | Default database username |
+| `ADMINER_DEFAULT_PASSWORD` | `${POSTGRES_PASSWORD}` | Default database password |
+| `ADMINER_DEFAULT_DB` | `${POSTGRES_DB}` | Default database name |
+| `ADMINER_DESIGN` | `nette` | Adminer UI theme |
 
 ## 🛠️ Service Configuration
 
@@ -185,9 +204,9 @@ The monitoring dashboard supports flexible service configuration via JSON:
     "url": "http://litellm:4000/health",
     "name": "LiteLLM"
   },
-  "mem0": {
-    "url": "http://mem0:8000/health",
-    "name": "Mem0"
+  "openmemory": {
+    "url": "http://openmemory:8765/docs",
+    "name": "OpenMemory"
   },
   "n8n": {
     "url": "http://n8n:5678/healthz",
@@ -344,7 +363,7 @@ networks:
 | Flowise | 3001 | - | HTTP |
 | OpenWebUI | 3002 | - | HTTP |
 | Qdrant | 6333 | - | HTTP |
-| Mem0 | 8000 | - | HTTP |
+| OpenMemory | 8000 | - | HTTP |
 | Supabase | 8000 | - | HTTP |
 | Monitoring | 8080 | 8080 | HTTP |
 
