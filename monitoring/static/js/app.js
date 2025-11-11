@@ -20,11 +20,30 @@ function renderServices(services) {
     const tbody = document.getElementById('services-tbody');
     tbody.innerHTML = '';
 
+    // Service URL mapping
+    const serviceUrls = {
+        'n8n': '/n8n/',
+        'adminer': '/adminer/',
+        'dify-web': '/dify/',
+        'flowise': '/flowise/',
+        'openwebui': '/openwebui/',
+        'ollama-webui': '/ollama-webui/',
+        'litellm': '/litellm/',
+        'openmemory': '/openmemory/',
+        'ollama': '/ollama/',
+        'qdrant': '/qdrant/',
+        'dify-api': '/dify/',
+        'dify-worker': '/dify/'
+    };
+
     Object.entries(services).forEach(([serviceKey, service]) => {
         const row = document.createElement('tr');
 
         const statusClass = service.status === 'up' ? 'up' : service.status === 'down' ? 'down' : 'disabled';
         const statusIndicatorClass = service.status === 'up' ? 'status-up' : service.status === 'down' ? 'status-down' : 'status-disabled';
+
+        const serviceUrl = serviceUrls[serviceKey];
+        const accessLink = serviceUrl ? `<a href="${serviceUrl}" target="_blank" class="logs-link">Access Service</a> | ` : '';
 
         row.innerHTML = `
             <td>${service.name}</td>
@@ -36,7 +55,7 @@ function renderServices(services) {
             <td>
                 ${service.status === 'disabled'
                     ? '<span style="color: #95a5a6;">Service disabled</span>'
-                    : `<a href="/logs/${serviceKey}" class="logs-link">View Logs</a> | <a href="/resources" class="logs-link">View Resources</a>`
+                    : `${accessLink}<a href="/logs/${serviceKey}" class="logs-link">View Logs</a> | <a href="/resources" class="logs-link">View Resources</a>`
                 }
             </td>
         `;
