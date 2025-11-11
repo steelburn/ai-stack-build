@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alert Dashboard - AI Stack</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f5f5f5; box-sizing: border-box; }
+        h1 { color: #333; text-align: center; margin: 10px 0; font-size: 1.5em; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; }
+        .back-link { color: #3498db; text-decoration: none; margin-bottom: 15px; display: inline-block; }
+        .back-link:hover { text-decoration: underline; }
+        .refresh-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 16px; }
+        .refresh-btn:hover { background: #2980b9; }
+        .alert-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 4px solid; }
+        .alert-critical { border-left-color: #e74c3c; }
+        .alert-warning { border-left-color: #f39c12; }
+        .alert-info { border-left-color: #3498db; }
+        .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px; }
+        .alert-service { font-weight: bold; font-size: 1.1em; }
+        .alert-timestamp { color: #666; font-size: 0.9em; }
+        .alert-message { color: #555; margin-bottom: 5px; }
+        .alert-type { padding: 2px 8px; border-radius: 3px; color: white; font-size: 0.8em; font-weight: bold; }
+        .alert-error { background-color: #e74c3c; }
+        .alert-warning { background-color: #f39c12; }
+        .alert-info { background-color: #3498db; }
+        .no-alerts { text-align: center; padding: 40px; background: white; border-radius: 8px; margin-top: 20px; }
+        .no-alerts h3 { color: #27ae60; }
+        .alert-count { background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .alert-count h2 { margin: 0; font-size: 2em; }
+        .alert-count p { margin: 5px 0 0 0; opacity: 0.8; }
+
+        /* Responsive breakpoints */
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            h1 { font-size: 2em; margin: 20px 0; }
+            .container { padding: 0 20px; }
+            .alert-card { padding: 20px; }
+            .alert-service { font-size: 1.2em; }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .alert-header { flex-direction: column; align-items: flex-start; }
+            .alert-service { font-size: 1em; }
+            .alert-timestamp { align-self: flex-end; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 5px; }
+            h1 { font-size: 1.2em; }
+            .alert-card { padding: 10px; }
+            .alert-count { padding: 10px; }
+            .alert-count h2 { font-size: 1.5em; }
+            .refresh-btn { padding: 8px 16px; font-size: 14px; }
+        }
+    </style>
+    <meta http-equiv="refresh" content="60">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        <h1>Alert Dashboard - AI Stack</h1>
+        <button onclick="location.reload()" class="refresh-btn">Refresh Now</button>
+        <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Auto-refresh every 60 seconds</p>
+
+        <div class="alert-count">
+            <h2>{{ alerts|length }}</h2>
+            <p>Active Alerts</p>
+        </div>
+
+        {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert-card alert-{{ alert.severity }}">
+                <div class="alert-header">
+                    <span class="alert-service">{{ alert.service }}</span>
+                    <span class="alert-type alert-{{ alert.type }}">{{ alert.severity.upper() }}</span>
+                </div>
+                <div class="alert-message">{{ alert.message }}</div>
+                <div class="alert-timestamp">{{ alert.formatted_time }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-alerts">
+                <h3>✅ All Systems Operational</h3>
+                <p>No active alerts detected. All services are running normally.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

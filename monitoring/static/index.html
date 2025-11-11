@@ -14,6 +14,15 @@
             <a href="metrics" class="metrics-link">📈 Prometheus Metrics</a>
             <a href="alerts">🚨 Alert Dashboard</a>
             <a href="trends">📉 Trends & History</a>
+            <button onclick="toggleServicesPanel()" class="services-toggle">🔗 Access Services</button>
+        </div>
+
+        <!-- Services Access Panel -->
+        <div id="services-panel" class="services-panel" style="display: none;">
+            <h3>Available Services</h3>
+            <div class="services-grid" id="services-grid">
+                <!-- Services will be loaded here -->
+            </div>
         </div>
         <div class="dashboard-grid">
             <div class="chart-container">

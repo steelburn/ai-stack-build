@@ -3,6 +3,19 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDashboard();
 });
 
+function toggleServicesPanel() {
+    const panel = document.getElementById('services-panel');
+    const button = document.querySelector('.services-toggle');
+
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+        button.textContent = '🔽 Access Services';
+    } else {
+        panel.style.display = 'none';
+        button.textContent = '🔗 Access Services';
+    }
+}
+
 async function loadDashboard() {
     try {
         const response = await fetch('/api/status');
@@ -18,32 +31,34 @@ async function loadDashboard() {
 
 function renderServices(services) {
     const tbody = document.getElementById('services-tbody');
+    const servicesGrid = document.getElementById('services-grid');
     tbody.innerHTML = '';
+    servicesGrid.innerHTML = '';
 
-    // Service URL mapping
+    // Service URL mapping with display names
     const serviceUrls = {
-        'n8n': '/n8n/',
-        'adminer': '/adminer/',
-        'dify-web': '/dify/',
-        'flowise': '/flowise/',
-        'openwebui': '/openwebui/',
-        'ollama-webui': '/ollama-webui/',
-        'litellm': '/litellm/',
-        'openmemory': '/openmemory/',
-        'ollama': '/ollama/',
-        'qdrant': '/qdrant/',
-        'dify-api': '/dify/',
-        'dify-worker': '/dify/'
+        'n8n': { url: '/n8n/', name: 'N8N Workflow', description: 'Workflow Automation' },
+        'adminer': { url: '/adminer/', name: 'Adminer', description: 'Database Admin' },
+        'dify-web': { url: '/dify/', name: 'Dify', description: 'AI App Platform' },
+        'flowise': { url: '/flowise/', name: 'Flowise', description: 'AI Workflow Builder' },
+        'openwebui': { url: '/openwebui/', name: 'OpenWebUI', description: 'LLM Web Interface' },
+        'ollama-webui': { url: '/ollama-webui/', name: 'Ollama WebUI', description: 'Model Management' },
+        'litellm': { url: '/litellm/', name: 'LiteLLM', description: 'LLM Router' },
+        'openmemory': { url: '/openmemory/', name: 'OpenMemory', description: 'AI Memory System' },
+        'ollama': { url: '/ollama/', name: 'Ollama API', description: 'LLM Server' },
+        'qdrant': { url: '/qdrant/', name: 'Qdrant', description: 'Vector Database' },
+        'dify-api': { url: '/dify/', name: 'Dify API', description: 'AI API' },
+        'dify-worker': { url: '/dify/', name: 'Dify Worker', description: 'Background Tasks' }
     };
 
     Object.entries(services).forEach(([serviceKey, service]) => {
+        // Table row
         const row = document.createElement('tr');
-
         const statusClass = service.status === 'up' ? 'up' : service.status === 'down' ? 'down' : 'disabled';
         const statusIndicatorClass = service.status === 'up' ? 'status-up' : service.status === 'down' ? 'status-down' : 'status-disabled';
 
         const serviceUrl = serviceUrls[serviceKey];
-        const accessLink = serviceUrl ? `<a href="${serviceUrl}" target="_blank" class="logs-link">Access Service</a> | ` : '';
+        const accessLink = serviceUrl ? `<a href="${serviceUrl.url}" target="_blank" class="logs-link">Access Service</a> | ` : '';
 
         row.innerHTML = `
             <td>${service.name}</td>
@@ -59,8 +74,23 @@ function renderServices(services) {
                 }
             </td>
         `;
-
         tbody.appendChild(row);
+
+        // Service card for grid
+        if (serviceUrl) {
+            const card = document.createElement('div');
+            card.className = 'service-card';
+
+            const statusClassForCard = service.status === 'up' ? 'up' : service.status === 'down' ? 'down' : 'disabled';
+
+            card.innerHTML = `
+                <h4>${serviceUrl.name}</h4>
+                <p style="margin: 5px 0; color: #666; font-size: 0.9em;">${serviceUrl.description}</p>
+                <a href="${serviceUrl.url}" target="_blank">Access Service</a>
+                <span class="status ${statusClassForCard}">${service.status.toUpperCase()}</span>
+            `;
+            servicesGrid.appendChild(card);
+        }
     });
 }
 

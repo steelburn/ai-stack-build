@@ -1,16 +1,40 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template_string, request, Response
-import requests
-import time
-from flask_cors import CORS
+"""
+AI Stack Monitoring Service - Main Application
+"""
 import os
-import json
-import docker
-from functools import wraps
-import psutil
-from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import threading
-import json
+
+from modules.config import SERVICES
+from modules.service_monitor import metrics_collection_worker
+from modules.routes import create_app
+
+# Create Flask application
+app = create_app()
+
+# Start the metrics collection thread
+metrics_thread = threading.Thread(target=metrics_collection_worker, daemon=True)
+metrics_thread.start()
+
+if __name__ == '__main__':
+    # Initialize upstream configuration files
+    upstream_dir = '/etc/nginx/upstreams'
+    os.makedirs(upstream_dir, exist_ok=True)
+
+    # Create initial dummy upstream configurations
+    upstreams = ['dify', 'n8n', 'flowise', 'openwebui', 'litellm', 'monitoring', 'openmemory', 'ollama', 'ollama-webui', 'adminer']
+    for upstream in upstreams:
+        config_file = os.path.join(upstream_dir, '{}.conf'.format(upstream))
+        # Special case for monitoring - it should always be available
+        if upstream == 'monitoring':
+            server = 'monitoring:8080'
+        else:
+            server = '127.0.0.1:1'
+        with open(config_file, 'w') as f:
+            f.write('upstream {} {{\n    server {};\n}}\n'.format(upstream, server))
+        print("Created initial upstream config: {}".format(config_file))
+
+    app.run(host='0.0.0.0', port=8080)
 
 # Global service state tracking for nginx reload
 SERVICE_STATES = {}  # Track previous service states
@@ -19,7 +43,7 @@ LAST_NGINX_RELOAD = 0
 
 app = Flask(__name__,
             static_folder='static',
-            static_url_path='/static')
+            template_folder='templates')
 
 # Enable CORS for all origins
 # CORS(app, resources={
@@ -589,122 +613,7 @@ def resources():
             resources[service] = dict(resource_data)
             resources[service]['name'] = info['name']
 
-    html = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Resource Monitor - AI Stack</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f5f5f5; box-sizing: border-box; }
-            h1 { color: #333; text-align: center; margin: 10px 0; font-size: 1.5em; }
-            .container { max-width: 1400px; margin: 0 auto; padding: 0 10px; }
-            table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; display: block; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; white-space: nowrap; }
-            th { background-color: #2c3e50; color: white; font-weight: bold; position: sticky; top: 0; }
-            .back-link { color: #3498db; text-decoration: none; margin-bottom: 15px; display: inline-block; }
-            .back-link:hover { text-decoration: underline; }
-            .refresh-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 16px; }
-            .refresh-btn:hover { background: #2980b9; }
-            .resource-bar { width: 100%; height: 20px; background-color: #ecf0f1; border-radius: 10px; overflow: hidden; margin: 2px 0; }
-            .cpu-bar { background: linear-gradient(to right, #e74c3c, #f39c12, #27ae60); }
-            .memory-bar { background: linear-gradient(to right, #3498db, #9b59b6); }
-            .resource-value { font-weight: bold; margin-bottom: 5px; }
-            .resource-percent { font-size: 0.8em; color: #666; }
-            .status-running { color: #27ae60; font-weight: bold; }
-            .status-stopped { color: #e74c3c; font-weight: bold; }
-            .metric-group { margin-bottom: 15px; }
-            .metric-label { font-weight: bold; color: #555; margin-bottom: 5px; }
-
-            /* Responsive breakpoints */
-            @media (min-width: 768px) {
-                body { padding: 20px; }
-                h1 { font-size: 2em; margin: 20px 0; }
-                .container { padding: 0 20px; }
-                th, td { padding: 12px; font-size: 1em; }
-            }
-
-            /* Mobile optimizations */
-            @media (max-width: 768px) {
-                th, td { padding: 6px 8px; font-size: 14px; }
-                .resource-value { font-size: 14px; }
-                .resource-percent { font-size: 12px; }
-                .metric-group { margin-bottom: 10px; }
-            }
-
-            @media (max-width: 480px) {
-                body { padding: 5px; }
-                h1 { font-size: 1.2em; }
-                .refresh-btn { padding: 8px 16px; font-size: 14px; }
-                th, td { padding: 4px 6px; font-size: 12px; }
-                .resource-bar { height: 16px; }
-            }
-        </style>
-        <meta http-equiv="refresh" content="10">
-    </head>
-    <body>
-        <div class="container">
-            <a href="/" class="back-link">← Back to Dashboard</a>
-            <h1>Resource Monitor - AI Stack Services</h1>
-            <button onclick="location.reload()" class="refresh-btn">Refresh Now</button>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Auto-refresh every 10 seconds</p>
-
-            <table>
-                <tr>
-                    <th>Service</th>
-                    <th>Status</th>
-                    <th>CPU Usage</th>
-                    <th>Memory Usage</th>
-                    <th>Network I/O</th>
-                    <th>Disk I/O</th>
-                </tr>
-                {% for service, resource in resources.items() %}
-                <tr>
-                    <td><strong>{{ resource.name }}</strong><br><small style="color: #666;">{{ service }}</small></td>
-                    <td class="status-{{ resource.container_status }}">{{ resource.container_status.title() }}</td>
-                    <td>
-                        <div class="metric-group">
-                            <div class="resource-value">{{ resource.cpu_percent }}%</div>
-                            <div class="resource-bar">
-                                <div class="cpu-bar" style="width: {{ resource.cpu_percent }}%; height: 100%;"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="metric-group">
-                            <div class="resource-value">{{ resource.memory_percent }}%</div>
-                            <div class="resource-percent">{{ format_bytes(resource.memory_usage) }} / {{ format_bytes(resource.memory_limit) }}</div>
-                            <div class="resource-bar">
-                                <div class="memory-bar" style="width: {{ resource.memory_percent }}%; height: 100%;"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="metric-group">
-                            <div class="metric-label">RX: {{ format_bytes(resource.network_rx) }}</div>
-                            <div class="metric-label">TX: {{ format_bytes(resource.network_tx) }}</div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="metric-group">
-                            <div class="metric-label">Read: {{ format_bytes(resource.disk_read) }}</div>
-                            <div class="metric-label">Write: {{ format_bytes(resource.disk_write) }}</div>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-
-            {% if not resources %}
-            <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; margin-top: 20px;">
-                <h3 style="color: #e74c3c;">No Resource Data Available</h3>
-                <p>Unable to fetch container resource statistics. Please check Docker connectivity.</p>
-            </div>
-            {% endif %}
-        </div>
-    </body>
-    </html>
-    '''
-    return render_template_string(html, resources=resources, format_bytes=format_bytes)
+    return render_template('resources.html', resources=resources, format_bytes=format_bytes)
 
 @app.route('/alerts')
 # @requires_auth
@@ -797,98 +706,7 @@ def view_alerts():
     for alert in alerts:
         alert['formatted_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(alert['timestamp']))
 
-    html = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Alert Dashboard - AI Stack</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f5f5f5; box-sizing: border-box; }
-            h1 { color: #333; text-align: center; margin: 10px 0; font-size: 1.5em; }
-            .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; }
-            .back-link { color: #3498db; text-decoration: none; margin-bottom: 15px; display: inline-block; }
-            .back-link:hover { text-decoration: underline; }
-            .refresh-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 16px; }
-            .refresh-btn:hover { background: #2980b9; }
-            .alert-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 4px solid; }
-            .alert-critical { border-left-color: #e74c3c; }
-            .alert-warning { border-left-color: #f39c12; }
-            .alert-info { border-left-color: #3498db; }
-            .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px; }
-            .alert-service { font-weight: bold; font-size: 1.1em; }
-            .alert-timestamp { color: #666; font-size: 0.9em; }
-            .alert-message { color: #555; margin-bottom: 5px; }
-            .alert-type { padding: 2px 8px; border-radius: 3px; color: white; font-size: 0.8em; font-weight: bold; }
-            .alert-error { background-color: #e74c3c; }
-            .alert-warning { background-color: #f39c12; }
-            .alert-info { background-color: #3498db; }
-            .no-alerts { text-align: center; padding: 40px; background: white; border-radius: 8px; margin-top: 20px; }
-            .no-alerts h3 { color: #27ae60; }
-            .alert-count { background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-            .alert-count h2 { margin: 0; font-size: 2em; }
-            .alert-count p { margin: 5px 0 0 0; opacity: 0.8; }
-
-            /* Responsive breakpoints */
-            @media (min-width: 768px) {
-                body { padding: 20px; }
-                h1 { font-size: 2em; margin: 20px 0; }
-                .container { padding: 0 20px; }
-                .alert-card { padding: 20px; }
-                .alert-service { font-size: 1.2em; }
-            }
-
-            /* Mobile optimizations */
-            @media (max-width: 768px) {
-                .alert-header { flex-direction: column; align-items: flex-start; }
-                .alert-service { font-size: 1em; }
-                .alert-timestamp { align-self: flex-end; }
-            }
-
-            @media (max-width: 480px) {
-                body { padding: 5px; }
-                h1 { font-size: 1.2em; }
-                .alert-card { padding: 10px; }
-                .alert-count { padding: 10px; }
-                .alert-count h2 { font-size: 1.5em; }
-                .refresh-btn { padding: 8px 16px; font-size: 14px; }
-            }
-        </style>
-        <meta http-equiv="refresh" content="60">
-    </head>
-    <body>
-        <div class="container">
-            <a href="/" class="back-link">← Back to Dashboard</a>
-            <h1>Alert Dashboard - AI Stack</h1>
-            <button onclick="location.reload()" class="refresh-btn">Refresh Now</button>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Auto-refresh every 60 seconds</p>
-
-            <div class="alert-count">
-                <h2>{{ alerts|length }}</h2>
-                <p>Active Alerts</p>
-            </div>
-
-            {% if alerts %}
-                {% for alert in alerts %}
-                <div class="alert-card alert-{{ alert.severity }}">
-                    <div class="alert-header">
-                        <span class="alert-service">{{ alert.service }}</span>
-                        <span class="alert-type alert-{{ alert.type }}">{{ alert.severity.upper() }}</span>
-                    </div>
-                    <div class="alert-message">{{ alert.message }}</div>
-                    <div class="alert-timestamp">{{ alert.formatted_time }}</div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="no-alerts">
-                    <h3>✅ All Systems Operational</h3>
-                    <p>No active alerts detected. All services are running normally.</p>
-                </div>
-            {% endif %}
-        </div>
-    </body>
-    </html>
-    '''
-    return render_template_string(html, alerts=alerts)
+    return render_template('alerts.html', alerts=alerts)
 
 @app.route('/trends')
 # @requires_auth
@@ -897,30 +715,7 @@ def view_trends():
         snapshots = METRICS_HISTORY.get('snapshots', [])
 
     if not snapshots:
-        html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Trends - AI Stack</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-                .container { max-width: 1200px; margin: 0 auto; text-align: center; }
-                .back-link { color: #3498db; text-decoration: none; margin-bottom: 20px; display: inline-block; }
-                .no-data { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <a href="/" class="back-link">← Back to Dashboard</a>
-                <div class="no-data">
-                    <h2>📊 Metrics Trends</h2>
-                    <p>Collecting historical data... Trends will be available after a few minutes of operation.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        '''
-        return render_template_string(html)
+        return render_template('trends.html', snapshots=None)
 
     # Prepare data for charts
     timestamps = [s['timestamp'] for s in snapshots]
@@ -944,164 +739,7 @@ def view_trends():
         else:
             service_response_times[service] = [0] * len(snapshots)
 
-    html = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Trends - AI Stack</title>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f5f5f5; box-sizing: border-box; }
-            h1 { color: #333; text-align: center; margin: 10px 0; font-size: 1.5em; }
-            .container { max-width: 1400px; margin: 0 auto; padding: 0 10px; }
-            .back-link { color: #3498db; text-decoration: none; margin-bottom: 15px; display: inline-block; }
-            .back-link:hover { text-decoration: underline; }
-            .refresh-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; font-size: 16px; }
-            .refresh-btn:hover { background: #2980b9; }
-            .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
-            .chart-container { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .chart-container canvas { width: 100% !important; height: 250px !important; }
-            .chart-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #333; text-align: center; }
-            .service-charts { margin-top: 20px; }
-            .service-chart { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .no-data { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
-
-            /* Responsive breakpoints */
-            @media (min-width: 768px) {
-                body { padding: 20px; }
-                h1 { font-size: 2em; margin: 20px 0; }
-                .container { padding: 0 20px; }
-                .chart-grid { grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-                .chart-container { padding: 20px; }
-                .chart-container canvas { height: 300px !important; }
-                .chart-title { font-size: 1.2em; margin-bottom: 15px; }
-                .service-charts { margin-top: 30px; }
-                .service-chart { padding: 20px; margin-bottom: 20px; }
-            }
-
-            /* Mobile optimizations */
-            @media (max-width: 480px) {
-                body { padding: 5px; }
-                h1 { font-size: 1.2em; }
-                .chart-container { padding: 10px; }
-                .chart-container canvas { height: 200px !important; }
-                .chart-title { font-size: 1em; }
-                .service-chart { padding: 10px; }
-                .refresh-btn { padding: 8px 16px; font-size: 14px; }
-            }
-        </style>
-        <meta http-equiv="refresh" content="300">
-    </head>
-    <body>
-        <div class="container">
-            <a href="/" class="back-link">← Back to Dashboard</a>
-            <h1>Metrics Trends - AI Stack</h1>
-            <button onclick="location.reload()" class="refresh-btn">Refresh Now</button>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Auto-refresh every 5 minutes | Showing last {{ snapshots|length }} data points</p>
-
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <div class="chart-title">System CPU Usage (%)</div>
-                    <canvas id="systemCpuChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <div class="chart-title">System Memory Usage (%)</div>
-                    <canvas id="systemMemoryChart"></canvas>
-                </div>
-            </div>
-
-            <div class="service-charts">
-                <h2 style="text-align: center; color: #333;">Service Response Times</h2>
-                {% for service, times in service_response_times.items() %}
-                <div class="service-chart">
-                    <div class="chart-title">{{ SERVICES[service].name }} Response Time (ms)</div>
-                    <canvas id="serviceChart{{ loop.index }}"></canvas>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <script>
-            const timeLabels = {{ time_labels | tojson }};
-            const systemCpuData = {{ system_cpu | tojson }};
-            const systemMemoryData = {{ system_memory | tojson }};
-            const serviceData = {{ service_response_times | tojson }};
-
-            // System CPU Chart
-            const systemCpuCtx = document.getElementById('systemCpuChart').getContext('2d');
-            new Chart(systemCpuCtx, {
-                type: 'line',
-                data: {
-                    labels: timeLabels,
-                    datasets: [{
-                        label: 'CPU %',
-                        data: systemCpuData,
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
-                }
-            });
-
-            // System Memory Chart
-            const systemMemoryCtx = document.getElementById('systemMemoryChart').getContext('2d');
-            new Chart(systemMemoryCtx, {
-                type: 'line',
-                data: {
-                    labels: timeLabels,
-                    datasets: [{
-                        label: 'Memory %',
-                        data: systemMemoryData,
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
-                }
-            });
-
-            // Service Response Time Charts
-            {% for service, times in service_response_times.items() %}
-            const serviceCtx{{ loop.index }} = document.getElementById('serviceChart{{ loop.index }}').getContext('2d');
-            new Chart(serviceCtx{{ loop.index }}, {
-                type: 'line',
-                data: {
-                    labels: timeLabels,
-                    datasets: [{
-                        label: 'Response Time (ms)',
-                        data: {{ times | tojson }},
-                        borderColor: '#27ae60',
-                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-            {% endfor %}
-        </script>
-    </body>
-    </html>
-    '''
-    return render_template_string(html, snapshots=snapshots, time_labels=time_labels, system_cpu=system_cpu, system_memory=system_memory, service_response_times=service_response_times, SERVICES=SERVICES)
+    return render_template('trends.html', snapshots=snapshots, time_labels=time_labels, system_cpu=system_cpu, system_memory=system_memory, service_response_times=service_response_times, SERVICES=SERVICES)
 
 if __name__ == '__main__':
     # Initialize upstream configuration files
