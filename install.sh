@@ -242,6 +242,18 @@ start_services() {
     fi
 }
 
+# Ensure Docker Compose build is run
+ensure_docker_compose_build() {
+    log_info "Building Docker images..."
+
+    if [ -f "docker-compose.yml" ]; then
+        docker-compose build
+        log_success "Docker images built successfully!"
+    else
+        log_warning "docker-compose.yml not found; skipping Docker image build."
+    fi
+}
+
 # Check images defined in docker-compose.yml and attempt to pull them.
 # If pull fails for any image, prompt the user to docker login or provide an override.
 check_and_pull_images() {
@@ -370,7 +382,10 @@ main() {
     log_info "Step 7: Starting services..."
     start_services
 
-    log_info "Step 8: Installation complete!"
+    log_info "Step 8: Building Docker images..."
+    ensure_docker_compose_build
+
+    log_info "Step 9: Installation complete!"
     show_completion
 
     echo

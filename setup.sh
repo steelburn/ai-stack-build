@@ -246,6 +246,10 @@ echo "✅ .env file ready"
 echo "📦 Pulling Docker images..."
 docker compose pull
 
+# Ensure Docker Compose build is run
+echo "🚀 Building Docker images..."
+docker-compose build
+
 # Ensure memory overcommit is enabled for Redis
 sudo sysctl -w vm.overcommit_memory=1
 

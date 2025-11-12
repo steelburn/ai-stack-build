@@ -1,35 +1,6 @@
 name: CI/CD Pipeline
 
-on:
-  push:
-    branches: [ main, master, develop ]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - '.dockerignore'
-  pull_request:
-    branches: [ main, master, develop ]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - '.dockerignore'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-      deploy:
-        description: 'Deploy after build'
-        required: false
-        default: false
-        type: boolean
+on: {}
 
 permissions:
   contents: read
