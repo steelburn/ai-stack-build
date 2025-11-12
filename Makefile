@@ -10,10 +10,22 @@ help: ## Show this help message
 setup: ## Run the complete setup process
 	./setup.sh
 
-install-docker: ## Install Docker and Docker Compose (Ubuntu/Debian)
-	curl -fsSL https://get.docker.com | sh
-	sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-	sudo chmod +x /usr/local/bin/docker-compose
+install-docker: ## Install Docker Engine and Docker Compose V2 (requires sudo)
+	@echo "Installing Docker Engine and Docker Compose V2..."
+	curl -fsSL https://get.docker.com -o get-docker.sh
+	sudo sh get-docker.sh
+	sudo usermod -aG docker $(USER)
+	@echo "Docker installed. Please log out and back in for group changes to take effect."
+
+	# Install Docker Compose V2 plugin
+	if ! docker compose version >/dev/null 2>&1; then \
+		sudo mkdir -p /usr/libexec/docker/cli-plugins; \
+		sudo curl -SL https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-$(uname -m) -o /usr/libexec/docker/cli-plugins/docker-compose; \
+		sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose; \
+		echo "Docker Compose V2 installed successfully."; \
+	else \
+		echo "Docker Compose V2 is already installed."; \
+	fi
 
 security-setup: generate-secrets generate-docker-secrets generate-ssl ## Run complete security setup (secrets, Docker secrets, SSL)
 
@@ -188,13 +200,6 @@ version: ## Show versions of key components
 	@echo "Ollama: $(shell docker compose exec ollama ollama --version 2>/dev/null || echo 'Not running')"
 	@echo "PostgreSQL: $(shell docker compose exec db postgres --version 2>/dev/null | head -1 || echo 'Not running')"
 	@echo "Redis: $(shell docker compose exec redis redis-server --version 2>/dev/null | head -1 || echo 'Not running')"
-
-install-docker: ## Install Docker Engine (requires sudo)
-	@echo "Installing Docker Engine..."
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sudo sh get-docker.sh
-	sudo usermod -aG docker $(USER)
-	@echo "Docker installed. Please log out and back in for group changes to take effect."
 
 uninstall: ## Remove all containers and images
 	docker compose down --rmi all --volumes --remove-orphans

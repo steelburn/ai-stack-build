@@ -51,7 +51,7 @@ make check-ports
 ### Services Won't Start
 
 **Symptoms:**
-- `docker-compose ps` shows services in "starting" or "unhealthy" state
+- `docker compose ps` shows services in "starting" or "unhealthy" state
 - Services exit immediately after starting
 
 **Solutions:**
@@ -91,11 +91,11 @@ make check-ports
 3. **Check Docker Logs**
    ```bash
    # View service-specific logs
-   docker-compose logs monitoring
-   docker-compose logs db
+   docker compose logs monitoring
+   docker compose logs db
 
    # View logs with timestamps
-   docker-compose logs --timestamps --tail=50 monitoring
+   docker compose logs --timestamps --tail=50 monitoring
    ```
 
 ### Database Connection Issues
@@ -109,10 +109,10 @@ make check-ports
 1. **Check Database Health**
    ```bash
    # Test database connectivity
-   docker-compose exec db pg_isready -U postgres -d dify
+   docker compose exec db pg_isready -U postgres -d dify
 
    # Check database logs
-   docker-compose logs db
+   docker compose logs db
    ```
 
 2. **Verify Credentials**
@@ -127,10 +127,10 @@ make check-ports
 3. **Restart Database**
    ```bash
    # Restart database service
-   docker-compose restart db
+   docker compose restart db
 
    # Wait for health check
-   docker-compose ps db
+   docker compose ps db
    ```
 
 ### Redis Configuration Issues
@@ -165,10 +165,10 @@ make check-ports
 3. **Verify Redis Connection**
    ```bash
    # Test Redis connectivity
-   docker-compose exec redis redis-cli ping
+   docker compose exec redis redis-cli ping
 
    # Test with password
-   docker-compose exec redis redis-cli -a "$(cat secrets/redis_password)" ping
+   docker compose exec redis redis-cli -a "$(cat secrets/redis_password)" ping
    ```
 
 ### Dify Storage Configuration Issues
@@ -207,27 +207,27 @@ make check-ports
 3. **Verify Storage Directory**
    ```bash
    # Check storage volume
-   docker-compose exec dify-api ls -la /app/api/storage/
+   docker compose exec dify-api ls -la /app/api/storage/
 
    # Restart Dify services
-   docker-compose restart dify-api dify-worker
+   docker compose restart dify-api dify-worker
    ```
 
 ### Dependency Issues
 
 **Symptoms:**
 - Services fail with "module not found" or "command not found"
-- Build failures during `docker-compose up`
+- Build failures during `docker compose up`
 
 **Solutions:**
 
 1. **Rebuild Images**
    ```bash
    # Force rebuild
-   docker-compose build --no-cache monitoring
+   docker compose build --no-cache monitoring
 
    # Or rebuild all
-   docker-compose build --no-cache
+   docker compose build --no-cache
    ```
 
 2. **Check Base Images**
@@ -252,7 +252,7 @@ make check-ports
 **Note:** All services in this stack now use public registry images. If you encounter private registry issues, they may be from custom modifications.
 
 **Symptoms (if using modified/custom images):**
-- `pull access denied` errors during `docker-compose up`
+- `pull access denied` errors during `docker compose up`
 - Services fail to start with image pull failures
 - Error: `denied: requested access to the resource is denied`
 
@@ -270,10 +270,10 @@ make check-ports
 2. **Use Alternative Image**
    ```bash
    # Option 1: Skip problematic service
-   docker-compose up --scale service-name=0
+   docker compose up --scale service-name=0
 
    # Option 2: Use environment variable override
-   PROBLEMATIC_IMAGE=your-public/alternative:latest docker-compose up
+   PROBLEMATIC_IMAGE=your-public/alternative:latest docker compose up
 
    # Option 3: Edit docker-compose.yml to use alternative
    # Change: image: private-registry/image:latest
@@ -302,19 +302,19 @@ make check-ports
 1. **Check Nginx Configuration**
    ```bash
    # Test nginx configuration
-   docker-compose exec nginx nginx -t
+   docker compose exec nginx nginx -t
 
    # Reload nginx
-   docker-compose exec nginx nginx -s reload
+   docker compose exec nginx nginx -s reload
 
    # Check nginx logs
-   docker-compose logs nginx
+   docker compose logs nginx
    ```
 
 2. **Verify Port Mapping**
    ```bash
    # Check port mappings
-   docker-compose ps
+   docker compose ps
 
    # Test local ports
    curl http://localhost:8080
@@ -356,20 +356,20 @@ make check-ports
 2. **Test Internal Connectivity**
    ```bash
    # Test from one container to another
-   docker-compose exec monitoring ping db
-   docker-compose exec monitoring curl http://db:5432
+   docker compose exec monitoring ping db
+   docker compose exec monitoring curl http://db:5432
    ```
 
 3. **Restart Network**
    ```bash
    # Restart all services
-   docker-compose down
-   docker-compose up -d
+   docker compose down
+   docker compose up -d
 
    # Or recreate network
-   docker-compose down
+   docker compose down
    docker network rm ai-stack
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ## ⚡ Performance Problems
@@ -410,7 +410,7 @@ make check-ports
    docker stats
 
    # Profile Python application
-   docker-compose exec monitoring python -m cProfile app.py
+   docker compose exec monitoring python -m cProfile app.py
    ```
 
 ### Memory Issues
@@ -468,10 +468,10 @@ make check-ports
 2. **Optimize Database Queries**
    ```bash
    # Check slow queries
-   docker-compose exec db psql -U postgres -d dify -c "SELECT * FROM pg_stat_activity;"
+   docker compose exec db psql -U postgres -d dify -c "SELECT * FROM pg_stat_activity;"
 
    # Add database indexes
-   docker-compose exec db psql -U postgres -d dify -c "CREATE INDEX CONCURRENTLY idx_name ON table_name (column_name);"
+   docker compose exec db psql -U postgres -d dify -c "CREATE INDEX CONCURRENTLY idx_name ON table_name (column_name);"
    ```
 
 3. **Enable Caching**
@@ -508,13 +508,13 @@ make check-ports
    ./generate-docker-secrets.sh
 
    # Restart services
-   docker-compose restart
+   docker compose restart
    ```
 
 3. **Check Authentication Configuration**
    ```bash
    # Verify service configuration
-   docker-compose exec monitoring env | grep MONITORING
+   docker compose exec monitoring env | grep MONITORING
    ```
 
 ### SSL/TLS Certificate Issues
@@ -545,7 +545,7 @@ make check-ports
 
 3. **Reload Nginx**
    ```bash
-   docker-compose exec nginx nginx -s reload
+   docker compose exec nginx nginx -s reload
    ```
 
 ### Firewall Blocking Access
@@ -600,10 +600,10 @@ make check-ports
 1. **Check Database Status**
    ```bash
    # Test database connectivity
-   docker-compose exec db pg_isready -U postgres
+   docker compose exec db pg_isready -U postgres
 
    # Check database logs
-   docker-compose logs db
+   docker compose logs db
    ```
 
 2. **Verify Connection String**
@@ -612,14 +612,14 @@ make check-ports
    grep DATABASE_URL .env
 
    # Test connection manually
-   docker-compose exec db psql -U postgres -d dify -c "SELECT version();"
+   docker compose exec db psql -U postgres -d dify -c "SELECT version();"
    ```
 
 3. **Restart Database**
    ```bash
-   docker-compose restart db
+   docker compose restart db
    sleep 10
-   docker-compose ps db
+   docker compose ps db
    ```
 
 ### Data Corruption
@@ -634,32 +634,32 @@ make check-ports
 1. **Check Database Integrity**
    ```bash
    # Run integrity checks
-   docker-compose exec db psql -U postgres -d dify -c "SELECT * FROM pg_stat_database;"
+   docker compose exec db psql -U postgres -d dify -c "SELECT * FROM pg_stat_database;"
 
    # Vacuum database
-   docker-compose exec db psql -U postgres -d dify -c "VACUUM ANALYZE;"
+   docker compose exec db psql -U postgres -d dify -c "VACUUM ANALYZE;"
    ```
 
 2. **Restore from Backup**
    ```bash
    # Stop services
-   docker-compose down
+   docker compose down
 
    # Restore database
    make restore FILE=backup/db_backup.tar.gz VOLUME=db_data
 
    # Restart services
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. **Rebuild Database**
    ```bash
    # Drop and recreate database
-   docker-compose exec db psql -U postgres -c "DROP DATABASE dify;"
-   docker-compose exec db psql -U postgres -c "CREATE DATABASE dify;"
+   docker compose exec db psql -U postgres -c "DROP DATABASE dify;"
+   docker compose exec db psql -U postgres -c "CREATE DATABASE dify;"
 
    # Run migrations
-   docker-compose exec dify-api python manage.py db upgrade
+   docker compose exec dify-api python manage.py db upgrade
    ```
 
 ## 📊 Monitoring Issues
@@ -675,10 +675,10 @@ make check-ports
 1. **Check Monitoring Service**
    ```bash
    # Check service status
-   docker-compose ps monitoring
+   docker compose ps monitoring
 
    # View monitoring logs
-   docker-compose logs monitoring
+   docker compose logs monitoring
    ```
 
 2. **Test Health Endpoints**
@@ -691,10 +691,10 @@ make check-ports
 3. **Check Configuration**
    ```bash
    # Verify services config
-   docker-compose exec monitoring cat /app/services-config.json
+   docker compose exec monitoring cat /app/services-config.json
 
    # Check environment
-   docker-compose exec monitoring env | grep MONITORING
+   docker compose exec monitoring env | grep MONITORING
    ```
 
 ### Resource Monitoring Not Working
@@ -708,10 +708,10 @@ make check-ports
 1. **Check Docker Socket Access**
    ```bash
    # Verify socket mount
-   docker-compose exec monitoring ls -la /var/run/docker.sock
+   docker compose exec monitoring ls -la /var/run/docker.sock
 
    # Test socket access
-   docker-compose exec monitoring docker ps
+   docker compose exec monitoring docker ps
    ```
 
 2. **Check Permissions**
@@ -725,7 +725,7 @@ make check-ports
 
 3. **Restart Monitoring Service**
    ```bash
-   docker-compose restart monitoring
+   docker compose restart monitoring
    ```
 
 ## 📈 Resource Issues
@@ -833,7 +833,7 @@ make check-ports
    ./generate-ssl.sh
 
    # Reload nginx
-   docker-compose exec nginx nginx -s reload
+   docker compose exec nginx nginx -s reload
    ```
 
 ### Mixed Content Issues
@@ -847,7 +847,7 @@ make check-ports
 1. **Check Nginx Configuration**
    ```bash
    # Verify all locations use HTTPS
-   docker-compose exec nginx cat /etc/nginx/nginx.conf
+   docker compose exec nginx cat /etc/nginx/nginx.conf
 
    # Add HSTS header
    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -911,21 +911,21 @@ make check-ports
 2. **Clean Restore Process**
    ```bash
    # Stop all services
-   docker-compose down
+   docker compose down
 
    # Remove old volumes
    docker volume rm ai-stack_db_data
 
    # Restore and restart
    make restore FILE=backup/db_backup.tar.gz VOLUME=db_data
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. **Post-Restore Checks**
    ```bash
    # Verify data integrity
-   docker-compose exec db pg_isready -U postgres
-   docker-compose logs db | tail -20
+   docker compose exec db pg_isready -U postgres
+   docker compose logs db | tail -20
    ```
 
 ## 🚨 Emergency Procedures
@@ -934,7 +934,7 @@ make check-ports
 
 ```bash
 # Last resort - complete rebuild
-docker-compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 docker system prune -a --volumes -f
 rm -rf backup/*
 make setup
@@ -975,8 +975,8 @@ cp docker-compose.yml emergency_compose_backup
 ### Quick Support Checklist
 
 - [ ] Run `make diagnose`
-- [ ] Check `docker-compose ps`
-- [ ] Review `docker-compose logs --tail=50`
+- [ ] Check `docker compose ps`
+- [ ] Review `docker compose logs --tail=50`
 - [ ] Verify `.env` configuration
 - [ ] Check system resources with `free -h && df -h`
 - [ ] Test basic connectivity with `curl -k https://localhost/monitoring/`
@@ -1018,5 +1018,4 @@ When asking for help, include:
 - **Documentation**: Check README.md and API docs
 - **Logs**: Include relevant log excerpts
 
-Remember: Most issues can be resolved by checking logs, verifying configuration, and ensuring adequate system resources!</content>
-<parameter name="filePath">/home/steelburn/Development/ai-stack-build/TROUBLESHOOTING_GUIDE.md
+Remember: Most issues can be resolved by checking logs, verifying configuration, and ensuring adequate system resources!
