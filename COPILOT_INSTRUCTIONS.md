@@ -4,6 +4,8 @@
 
 The AI Stack Build is a comprehensive, production-ready containerized AI services platform featuring advanced monitoring, security, and deployment capabilities. This project orchestrates multiple AI services including Dify, Ollama, LiteLLM, OpenWebUI, N8N, Flowise, and others, providing a complete AI development and deployment environment.
 
+> Note: This repository prefers Docker Compose V2. Use the `docker compose` (space) command instead of the legacy `docker-compose` binary. Examples in the docs have been updated where practical.
+
 ### 🎯 Key Components
 - **15+ AI Services**: Complete AI ecosystem from LLM hosting to workflow automation
 - **Enterprise Security**: SSL/TLS encryption, HTTP Basic Auth, Docker secrets, network segmentation
@@ -160,7 +162,7 @@ make help
 # Always start with these commands
 make diagnose
 make status
-docker-compose ps
+docker compose ps
 docker system df
 ```
 
@@ -308,7 +310,7 @@ df -h | grep qdrant
 ```
 
 ### Services Won't Start
-**Symptoms:** `docker-compose ps` shows services in "starting" or "unhealthy" state
+**Symptoms:** `docker compose ps` shows services in "starting" or "unhealthy" state
 
 **Solutions:**
 1. Check resource limits: `free -h`
@@ -320,19 +322,19 @@ df -h | grep qdrant
 **Symptoms:** Services running but not accessible via browser/API
 
 **Solutions:**
-1. Check Nginx configuration: `docker-compose exec nginx nginx -t`
+1. Check Nginx configuration: `docker compose exec nginx nginx -t`
 2. Verify SSL certificates: `make ssl-check`
-3. Test internal connectivity: `docker-compose exec monitoring curl http://dify-web:3000`
+3. Test internal connectivity: `docker compose exec monitoring curl http://dify-web:3000`
 4. Check firewall rules: `sudo ufw status`
 
 ### Database Connection Issues
 **Symptoms:** Services fail with database connection errors
 
 **Solutions:**
-1. Check database status: `docker-compose ps db`
+1. Check database status: `docker compose ps db`
 2. Verify credentials: `cat secrets/db_password`
-3. Test connectivity: `docker-compose exec db pg_isready -U postgres`
-4. Check database logs: `docker-compose logs db`
+3. Test connectivity: `docker compose exec db pg_isready -U postgres`
+4. Check database logs: `docker compose logs db`
 
 ### High Resource Usage
 **Symptoms:** System slowdown, services crashing
@@ -349,7 +351,7 @@ df -h | grep qdrant
 **Solutions:**
 1. Check certificate validity: `openssl x509 -in nginx/ssl/cert.pem -checkend 86400`
 2. Regenerate certificates: `./generate-ssl.sh`
-3. Reload Nginx: `docker-compose exec nginx nginx -s reload`
+3. Reload Nginx: `docker compose exec nginx nginx -s reload`
 ````
 
 ## 🔧 Configuration Management

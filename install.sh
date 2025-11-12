@@ -247,7 +247,8 @@ ensure_docker_compose_build() {
     log_info "Building Docker images..."
 
     if [ -f "docker-compose.yml" ]; then
-        docker-compose build
+        # Use Docker Compose V2 command (plugin) instead of legacy docker-compose
+        docker compose build
         log_success "Docker images built successfully!"
     else
         log_warning "docker-compose.yml not found; skipping Docker image build."
