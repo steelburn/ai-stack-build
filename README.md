@@ -75,7 +75,7 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 - **[Dify](https://dify.ai)**: Open-source LLM application development platform
 - **[Ollama](https://ollama.ai)**: Local LLM runner with model management
 - **[Ollama WebUI](https://github.com/ollama-webui/ollama-webui)**: Web interface for Ollama model management
-- **[LiteLLM](https://litellm.ai)**: LLM API proxy and load balancer
+- **[LiteLLM](https://litellm.ai)**: LLM API proxy and load balancer (OpenAI, Anthropic Claude, and more)
 - **[OpenWebUI](https://openwebui.com)**: Modern web interface for LLMs
 - **[OpenMemory](https://openmemory.ai)**: AI memory and context management
 

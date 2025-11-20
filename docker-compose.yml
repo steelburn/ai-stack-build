@@ -136,6 +136,7 @@ services:
       LITELLM_MASTER_KEY: "$(cat /run/secrets/litellm_master_key)"
       UI_USERNAME: ${UI_USERNAME}
       UI_PASSWORD: ${UI_PASSWORD}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     secrets:
       - litellm_master_key
       - litellm_salt_key

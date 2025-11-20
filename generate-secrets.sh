@@ -40,6 +40,7 @@ N8N_ENCRYPTION_KEY=$(generate_api_key)
 FLOWISE_SECRETKEY=$(generate_api_key)
 OPENWEBUI_SECRET_KEY=$(generate_api_key)
 OPENAI_API_KEY="sk-$(generate_api_key)"  # Placeholder - user should set real key
+ANTHROPIC_API_KEY="sk-ant-$(generate_api_key)"  # Placeholder - user should set real key
 UI_PASSWORD=$(generate_password)
 
 # Create secrets directory
@@ -75,6 +76,7 @@ sed -i "s/N8N_ENCRYPTION_KEY=.*/N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY/" .env
 sed -i "s/FLOWISE_SECRETKEY=.*/FLOWISE_SECRETKEY=$FLOWISE_SECRETKEY/" .env
 sed -i "s/OPENWEBUI_SECRET_KEY=.*/OPENWEBUI_SECRET_KEY=$OPENWEBUI_SECRET_KEY/" .env
 sed -i "s/OPENAI_API_KEY=.*/OPENAI_API_KEY=$OPENAI_API_KEY/" .env
+sed -i "s/ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY/" .env
 sed -i "s/UI_USERNAME=.*/UI_USERNAME=admin/" .env
 sed -i "s/UI_PASSWORD=.*/UI_PASSWORD=$LITELLM_MASTER_KEY/" .env
 
@@ -90,7 +92,7 @@ echo "✅ Secrets generated and .env updated!"
 echo "✅ Docker secret files created in ./secrets/"
 echo ""
 echo "⚠️  IMPORTANT SECURITY NOTES:"
-echo "1. The OPENAI_API_KEY is a placeholder. Replace it with your real OpenAI API key."
+echo "1. The OPENAI_API_KEY and ANTHROPIC_API_KEY are placeholders. Replace them with your real API keys."
 echo "2. Change default usernames and passwords in services that use them."
 echo "3. Store this .env file and ./secrets/ directory securely and never commit them to version control."
 echo "4. Consider using Docker secrets or external secret management for production."

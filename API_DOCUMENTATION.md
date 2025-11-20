@@ -194,6 +194,21 @@ Content-Type: application/json
 }
 ```
 
+**Claude Example**:
+```json
+{
+  "model": "claude-3-5-sonnet-20241022",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 100
+}
+```
+
 **Response**:
 ```json
 {
@@ -235,6 +250,12 @@ GET /models
       "object": "model",
       "created": 1677610602,
       "owned_by": "openai"
+    },
+    {
+      "id": "claude-3-5-sonnet-20241022",
+      "object": "model",
+      "created": 1727126400,
+      "owned_by": "anthropic"
     }
   ]
 }

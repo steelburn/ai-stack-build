@@ -85,6 +85,7 @@ This document provides comprehensive reference for all configuration options, en
 | `OPENMEMORY_QDRANT_API_KEY` | `difyai123456` | Qdrant API key for OpenMemory |
 | `OPENMEMORY_DATABASE_URL` | `postgresql://...` | Database URL for OpenMemory |
 | `OPENAI_API_KEY` | - | OpenAI API key (if using OpenAI) |
+| `ANTHROPIC_API_KEY` | - | Anthropic API key (if using Claude models) |
 
 ### N8N Configuration
 
