@@ -315,7 +315,7 @@ check_and_pull_images() {
         fi
 
         log_info "Attempting to pull image: $img_trimmed"
-        if ! docker pull "$img_trimmed" >/dev/null 2>&1; then
+        if ! docker pull "$img_trimmed"; then
             log_warning "Failed to pull image: $img_trimmed"
             failed+=("$img_trimmed")
         else
