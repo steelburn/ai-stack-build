@@ -101,53 +101,69 @@ check_requirements() {
         log_warning "Missing required dependencies: ${missing_deps[*]}"
         log_info "Installing missing dependencies..."
         
-        # Detect package manager and install
-        if command_exists apt-get; then
-            log_info "Using apt-get to install dependencies..."
-            sudo apt-get update
-            sudo apt-get install -y "${missing_deps[@]}"
-        elif command_exists yum; then
-            log_info "Using yum to install dependencies..."
-            sudo yum install -y "${missing_deps[@]}"
-        elif command_exists dnf; then
-            log_info "Using dnf to install dependencies..."
-            sudo dnf install -y "${missing_deps[@]}"
-        elif command_exists pacman; then
-            log_info "Using pacman to install dependencies..."
-            sudo pacman -Syu --noconfirm "${missing_deps[@]}"
-        else
-            log_error "No supported package manager found. Please install dependencies manually:"
-            log_info "  Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y ${missing_deps[*]}"
-            log_info "  CentOS/RHEL: sudo yum install -y ${missing_deps[*]}"
-            log_info "  Fedora: sudo dnf install -y ${missing_deps[*]}"
-            log_info "  Arch Linux: sudo pacman -Syu ${missing_deps[*]}"
-            exit 1
-        fi
-        
-        # Special handling for Docker
-        if [[ " ${missing_deps[*]} " =~ " docker " ]]; then
-            # Try to install Docker via package manager first
-            if command_exists apt-get; then
-                sudo apt-get install -y docker.io docker-compose-v2
-            elif command_exists yum; then
-                sudo yum install -y docker docker-compose
-            elif command_exists dnf; then
-                sudo dnf install -y docker docker-compose
-            elif command_exists pacman; then
-                sudo pacman -Syu --noconfirm docker docker-compose
+        # Prefer installing Docker via official installation script when Docker is missing,
+        # but still install other missing dependencies via the system package manager.
+        # Build a list that excludes 'docker' so package managers don't attempt to install it.
+        to_install=()
+        install_docker_via_script=false
+        for dep in "${missing_deps[@]}"; do
+            if [ "$dep" = "docker" ]; then
+                install_docker_via_script=true
+            else
+                to_install+=("$dep")
             fi
-            
-            # If package manager installation didn't work, use official Docker script
+        done
+
+        # Detect package manager and install other dependencies
+        if [ ${#to_install[@]} -ne 0 ]; then
+            if command_exists apt-get; then
+                log_info "Using apt-get to install dependencies..."
+                sudo apt-get update
+                sudo apt-get install -y "${to_install[@]}"
+            elif command_exists yum; then
+                log_info "Using yum to install dependencies..."
+                sudo yum install -y "${to_install[@]}"
+            elif command_exists dnf; then
+                log_info "Using dnf to install dependencies..."
+                sudo dnf install -y "${to_install[@]}"
+            elif command_exists pacman; then
+                log_info "Using pacman to install dependencies..."
+                sudo pacman -Syu --noconfirm "${to_install[@]}"
+            else
+                log_error "No supported package manager found. Please install dependencies manually:"
+                log_info "  Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y ${to_install[*]}"
+                log_info "  CentOS/RHEL: sudo yum install -y ${to_install[*]}"
+                log_info "  Fedora: sudo dnf install -y ${to_install[*]}"
+                log_info "  Arch Linux: sudo pacman -Syu ${to_install[*]}"
+                exit 1
+            fi
+        fi
+
+        # Install Docker via official script if it was requested (preferred)
+        if [ "$install_docker_via_script" = true ]; then
             if ! command_exists docker; then
-                log_info "Installing Docker using official installation script..."
+                log_info "Installing Docker using official installation script (https://get.docker.com)..."
                 curl -fsSL https://get.docker.com -o get-docker.sh
                 sh get-docker.sh
-                rm get-docker.sh
+                rm -f get-docker.sh
+            else
+                log_info "Docker already present; skipping official script."
             fi
-            
+
+            # Ensure docker-compose V2 plugin is available (package managers or upstream may provide it)
+            if ! docker compose version >/dev/null 2>&1; then
+                if command_exists apt-get; then
+                    sudo apt-get install -y docker-compose-plugin || true
+                elif command_exists dnf; then
+                    sudo dnf install -y docker-compose-plugin || true
+                elif command_exists yum; then
+                    sudo yum install -y docker-compose-plugin || true
+                fi
+            fi
+
             # Add user to docker group
             if [[ $EUID -ne 0 ]]; then
-                sudo usermod -aG docker $USER
+                sudo usermod -aG docker $USER || true
                 log_warning "Added $USER to docker group. You may need to log out and back in for this to take effect."
             fi
             log_success "Docker installed successfully!"
