@@ -368,6 +368,25 @@ SERVICE_2_URL=http://another-service:3000/health
 | **LiteLLM API** | https://localhost/litellm/chat/completions | API Key |
 | **OpenMemory API** | https://localhost/openmemory/api/v1/memories/ | None |
 
+### 🏠 Direct Port Access (Individual Service Ports)
+Each service is also accessible directly via its assigned port for development and advanced usage:
+
+| Service | Direct URL | Port Variable | Default Port | Authentication |
+|---------|------------|---------------|--------------|----------------|
+| **Monitoring Dashboard** | http://localhost:5000 | `MONITORING_PORT` | 5000 | HTTP Basic Auth |
+| **Dify Web** | http://localhost:3001 | `DIFY_WEB_PORT` | 3001 | Via Dify |
+| **Dify API** | http://localhost:5001 | `DIFY_API_PORT` | 5001 | API Key |
+| **OpenWebUI** | http://localhost:8082 | `OPENWEBUI_PORT` | 8082 | Built-in Auth |
+| **Ollama WebUI** | http://localhost:8081 | `OLLAMA_WEBUI_PORT` | 8081 | None |
+| **N8N** | http://localhost:5678 | `N8N_PORT` | 5678 | HTTP Basic Auth |
+| **Flowise** | http://localhost:3000 | `FLOWISE_PORT` | 3000 | Built-in Auth |
+| **LiteLLM** | http://localhost:4000 | `LITELLM_PORT` | 4000 | API Key |
+| **Supabase** | localhost:54322 | `SUPABASE_PORT` | 54322 | Database Auth |
+| **Adminer** | http://localhost:8083 | `ADMINER_PORT` | 8083 | HTTP Basic Auth |
+| **RabbitMQ Management** | http://localhost:15672 | `RABBITMQ_MANAGEMENT_PORT` | 15672 | Built-in Auth |
+
+> **Port Management**: The setup script automatically checks port availability and assigns alternative ports if conflicts are detected. Port assignments are stored in the `.env` file.
+
 ### 🏠 Internal Services (Docker Network Only)
 | Service | Purpose | Access |
 |---------|---------|--------|
@@ -375,8 +394,6 @@ SERVICE_2_URL=http://another-service:3000/health
 | **PostgreSQL** | Primary Database | Internal services only |
 | **Redis** | Cache & Sessions | Internal services only |
 | **Supabase** | Alternative Database | Internal services only |
-
-> **Security Note**: All user-facing services are protected behind the Nginx reverse proxy with SSL/TLS encryption, rate limiting, and security headers. Direct port access has been removed for security.
 
 ## 🔐 Security Configuration
 

@@ -1,3 +1,4 @@
+[Current] - feat: Expose individual ports for all public services with automatic port conflict resolution (steelburn, now)
 9ef406d - Fix CSP policy for monitoring dashboard (steelburn, 2 minutes ago)
 6858442 - Allow external access to monitoring dashboard (steelburn, 3 hours ago)
 3ecc9cc - Fix CSP policy for monitoring dashboard (steelburn, 3 hours ago)

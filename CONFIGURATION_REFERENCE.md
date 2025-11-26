@@ -26,6 +26,24 @@ This document provides comprehensive reference for all configuration options, en
 | `EMAIL` | - | Email for Let's Encrypt certificates |
 | `TZ` | `UTC` | Timezone for containers |
 
+### Port Configurations
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MONITORING_PORT` | `5000` | Monitoring dashboard port |
+| `OLLAMA_WEBUI_PORT` | `8081` | Ollama WebUI port |
+| `LITELLM_PORT` | `4000` | LiteLLM service port |
+| `N8N_PORT` | `5678` | N8N service port |
+| `FLOWISE_PORT` | `3000` | Flowise service port |
+| `SUPABASE_PORT` | `54322` | Supabase service port |
+| `OPENWEBUI_PORT` | `8082` | OpenWebUI service port |
+| `DIFY_WEB_PORT` | `3001` | Dify Web service port |
+| `DIFY_API_PORT` | `5001` | Dify API service port |
+| `ADMINER_PORT` | `8083` | Adminer service port |
+| `NGINX_HTTP_PORT` | `8080` | Nginx HTTP port |
+| `RABBITMQ_PORT` | `5672` | RabbitMQ AMQP port |
+| `RABBITMQ_MANAGEMENT_PORT` | `15672` | RabbitMQ Management port |
+
 ### Database Configuration
 
 | Variable | Default | Description |
@@ -61,6 +79,7 @@ This document provides comprehensive reference for all configuration options, en
 |----------|---------|-------------|
 | `OLLAMA_HOST` | `http://ollama:11434` | Ollama API host |
 | `OLLAMA_WEBUI_SECRET_KEY` | `your-secret-key` | Ollama WebUI secret key |
+| `OLLAMA_WEBUI_PORT` | `8081` | Ollama WebUI service port |
 | `OLLAMA_MAX_MEMORY` | - | Maximum memory for Ollama (e.g., "16GB") |
 | `OLLAMA_NUM_GPU` | - | Number of GPUs to use |
 | `OLLAMA_GPU_LAYERS` | - | GPU layers for model loading |
@@ -113,6 +132,7 @@ This document provides comprehensive reference for all configuration options, en
 | `SUPABASE_ANON_KEY` | - | Anonymous user key |
 | `SUPABASE_SERVICE_ROLE_KEY` | - | Service role key |
 | `SUPABASE_URL` | `http://supabase:8000` | Supabase URL |
+| `SUPABASE_PORT` | `54322` | Supabase service port |
 | `SUPABASE_JWT_SECRET` | - | JWT secret for authentication |
 
 ### OpenWebUI Configuration
@@ -123,7 +143,7 @@ This document provides comprehensive reference for all configuration options, en
 | `WEBUI_AUTH` | `true` | Enable authentication |
 | `WEBUI_AUTH_USERNAME` | - | Admin username |
 | `WEBUI_AUTH_PASSWORD` | - | Admin password |
-| `WEBUI_PORT` | `3002` | OpenWebUI service port |
+| `OPENWEBUI_PORT` | `8082` | OpenWebUI service port |
 
 ### Dify Configuration
 
@@ -136,6 +156,8 @@ This document provides comprehensive reference for all configuration options, en
 | `APP_WEB_URL` | `http://localhost:3000` | App web URL |
 | `FILES_URL` | `http://localhost:3000` | Files service URL |
 | `INTERNAL_FILES_URL` | `http://api:5001` | Internal files URL |
+| `DIFY_WEB_PORT` | `3001` | Dify Web service port |
+| `DIFY_API_PORT` | `5001` | Dify API service port |
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `VECTOR_STORE` | `qdrant` | Vector database type |
 | `QDRANT_URL` | `http://qdrant:6333` | Qdrant service URL |
@@ -151,6 +173,7 @@ This document provides comprehensive reference for all configuration options, en
 |----------|---------|-------------|
 | `MONITORING_USERNAME` | - | Monitoring dashboard username |
 | `MONITORING_PASSWORD` | - | Monitoring dashboard password |
+| `MONITORING_PORT` | `5000` | Monitoring dashboard port |
 | `SERVICES_CONFIG` | - | Path to services config JSON |
 | `FLASK_ENV` | `production` | Flask environment |
 | `GUNICORN_WORKERS` | `4` | Number of Gunicorn workers |
@@ -163,6 +186,7 @@ This document provides comprehensive reference for all configuration options, en
 | `ENABLE_DATABASE_ADMIN` | `false` | Enable Adminer database management |
 | `ADMINER_USERNAME` | `admin` | Adminer HTTP Basic Auth username |
 | `ADMINER_PASSWORD` | `password` | Adminer HTTP Basic Auth password |
+| `ADMINER_PORT` | `8083` | Adminer service port |
 | `ADMINER_DEFAULT_SERVER` | `db` | Default database server |
 | `ADMINER_DEFAULT_USER` | `${POSTGRES_USER}` | Default database username |
 | `ADMINER_DEFAULT_PASSWORD` | `${POSTGRES_PASSWORD}` | Default database password |
@@ -355,20 +379,25 @@ networks:
 
 ### Port Mappings
 
-| Service | Internal Port | External Port | Protocol |
-|---------|---------------|---------------|----------|
-| Nginx | 80, 443 | 80, 443 | HTTP/HTTPS |
-| Dify API | 8080 | - | HTTP |
-| Dify Web | 3000 | - | HTTP |
-| Ollama | 11434 | - | HTTP |
-| LiteLLM | 4000 | - | HTTP |
-| N8N | 5678 | - | HTTP |
-| Flowise | 3001 | - | HTTP |
-| OpenWebUI | 3002 | - | HTTP |
-| Qdrant | 6333 | - | HTTP |
-| OpenMemory | 8000 | - | HTTP |
-| Supabase | 8000 | - | HTTP |
-| Monitoring | 8080 | 8080 | HTTP |
+| Service | Internal Port | External Port | Protocol | Variable |
+|---------|---------------|---------------|----------|----------|
+| Nginx HTTP | 80 | Variable | HTTP | `NGINX_HTTP_PORT` (default: 8080) |
+| Nginx HTTPS | 443 | 443 | HTTPS | Fixed |
+| Dify API | 5001 | Variable | HTTP | `DIFY_API_PORT` (default: 5001) |
+| Dify Web | 3000 | Variable | HTTP | `DIFY_WEB_PORT` (default: 3001) |
+| Ollama | 11434 | - | HTTP | Internal only |
+| Ollama WebUI | 8080 | Variable | HTTP | `OLLAMA_WEBUI_PORT` (default: 8081) |
+| LiteLLM | 4000 | Variable | HTTP | `LITELLM_PORT` (default: 4000) |
+| N8N | 5678 | Variable | HTTP | `N8N_PORT` (default: 5678) |
+| Flowise | 3000 | Variable | HTTP | `FLOWISE_PORT` (default: 3000) |
+| OpenWebUI | 8080 | Variable | HTTP | `OPENWEBUI_PORT` (default: 8082) |
+| Qdrant | 6333 | - | HTTP | Internal only |
+| OpenMemory | 8000 | - | HTTP | Internal only |
+| Supabase | 5432 | Variable | PostgreSQL | `SUPABASE_PORT` (default: 54322) |
+| Monitoring | 5000 | Variable | HTTP | `MONITORING_PORT` (default: 5000) |
+| Adminer | 8080 | Variable | HTTP | `ADMINER_PORT` (default: 8083) |
+| RabbitMQ | 5672 | Variable | AMQP | `RABBITMQ_PORT` (default: 5672) |
+| RabbitMQ Management | 15672 | Variable | HTTP | `RABBITMQ_MANAGEMENT_PORT` (default: 15672) |
 
 ### Nginx Configuration
 
