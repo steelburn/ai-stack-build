@@ -149,48 +149,66 @@ update_nginx_port() {
 # Validate environment before proceeding
 validate_environment
 
-# Port conflict resolution
-echo "🔍 Checking for port conflicts..."
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Checking for port conflicts" >> "$LOG_FILE"
-
-# Check and resolve LiteLLM port (4000)
-if check_port 4000; then
-    echo "⚠️  Port 4000 (LiteLLM) is already in use. Finding alternative..."
-    NEW_LITELLM_PORT=$(find_available_port 4001)
-    if [ $? -eq 0 ]; then
-        update_docker_compose_port "litellm" "4000:4000" "${NEW_LITELLM_PORT}:4000"
-        update_nginx_port "litellm" "4000" "$NEW_LITELLM_PORT"
-        echo "✅ LiteLLM port changed to $NEW_LITELLM_PORT"
-    fi
-else
-    echo "✅ Port 4000 (LiteLLM) is available"
+# Source the .env file to get current values
+if [ -f ".env" ]; then
+    source .env
 fi
 
-# Check and resolve Supabase port (54322)
-if check_port 54322; then
-    echo "⚠️  Port 54322 (Supabase) is already in use. Finding alternative..."
-    NEW_SUPABASE_PORT=$(find_available_port 54323)
-    if [ $? -eq 0 ]; then
-        update_docker_compose_port "supabase" "54322:5432" "${NEW_SUPABASE_PORT}:5432"
-        echo "✅ Supabase port changed to $NEW_SUPABASE_PORT"
-    fi
-else
-    echo "✅ Port 54322 (Supabase) is available"
-fi
+# Port assignments and conflict resolution
+echo "🔌 Assigning available ports for services..."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Assigning ports for services" >> "$LOG_FILE"
 
-# Check and resolve Nginx HTTP port (8080)
-if check_port 8080; then
-    echo "⚠️  Port 8080 (Nginx HTTP) is already in use. Finding alternative..."
-    NEW_NGINX_HTTP_PORT=$(find_available_port 8081)
-    if [ $? -eq 0 ]; then
-        update_docker_compose_port "nginx" "8080:80" "${NEW_NGINX_HTTP_PORT}:80"
-        echo "✅ Nginx HTTP port changed to $NEW_NGINX_HTTP_PORT"
-    fi
-else
-    echo "✅ Port 8080 (Nginx HTTP) is available"
-fi
+# Define service ports with defaults
+declare -A service_ports=(
+    ["MONITORING_PORT"]="5000"
+    ["OLLAMA_WEBUI_PORT"]="8081"
+    ["LITELLM_PORT"]="4000"
+    ["N8N_PORT"]="5678"
+    ["FLOWISE_PORT"]="3000"
+    ["SUPABASE_PORT"]="54322"
+    ["OPENWEBUI_PORT"]="8082"
+    ["DIFY_WEB_PORT"]="3001"
+    ["DIFY_API_PORT"]="5001"
+    ["ADMINER_PORT"]="8083"
+    ["NGINX_HTTP_PORT"]="8080"
+    ["RABBITMQ_PORT"]="5672"
+    ["RABBITMQ_MANAGEMENT_PORT"]="15672"
+)
 
-# Check and resolve Nginx HTTPS port (443)
+# Function to update .env file
+update_env_port() {
+    local var_name=$1
+    local new_value=$2
+    if [ -f ".env" ]; then
+        sed -i "s/^${var_name}=.*$/${var_name}=${new_value}/" .env
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Updated ${var_name} to ${new_value} in .env" >> "$LOG_FILE"
+    fi
+}
+
+# Check and assign ports
+for var in "${!service_ports[@]}"; do
+    default_port=${service_ports[$var]}
+    current_port=${!var:-$default_port}
+    
+    if check_port "$current_port"; then
+        echo "⚠️  Port $current_port (${var}) is already in use. Finding alternative..."
+        new_port=$(find_available_port $((current_port + 1)))
+        if [ $? -eq 0 ]; then
+            update_env_port "$var" "$new_port"
+            echo "✅ ${var} port changed to $new_port"
+        else
+            echo "❌ Could not find available port for ${var}"
+        fi
+    else
+        echo "✅ Port $current_port (${var}) is available"
+        # Ensure it's set in .env
+        if ! grep -q "^${var}=" .env; then
+            echo "${var}=${current_port}" >> .env
+        fi
+    fi
+done
+
+# Special check for Nginx HTTPS (443)
 if check_port 443; then
     echo "⚠️  Port 443 (Nginx HTTPS) is already in use. Finding alternative..."
     NEW_NGINX_HTTPS_PORT=$(find_available_port 8443)
