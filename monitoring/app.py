@@ -18,7 +18,7 @@ metrics_thread.start()
 
 if __name__ == '__main__':
     # Initialize upstream configuration files
-    upstream_dir = '/etc/nginx/upstreams'
+    upstream_dir = '/etc/nginx/conf.d/upstreams'
     os.makedirs(upstream_dir, exist_ok=True)
 
     # Create initial dummy upstream configurations
@@ -137,7 +137,6 @@ def update_nginx_upstream(service_name):
     try:
         # Define service to upstream mappings
         service_upstream_map = {
-            'dify-api': ('dify', 'dify-api:8080'),
             'dify-web': ('dify', 'dify-web:3000'),
             'n8n': ('n8n', 'n8n:5678'),
             'flowise': ('flowise', 'flowise:3000'),
@@ -156,7 +155,7 @@ def update_nginx_upstream(service_name):
         upstream_name, server_address = service_upstream_map[service_name]
 
         # Create upstream config file
-        upstream_dir = '/etc/nginx/upstreams'
+        upstream_dir = '/etc/nginx/conf.d/upstreams'
         os.makedirs(upstream_dir, exist_ok=True)
 
         upstream_config = """upstream {} {{
@@ -740,23 +739,3 @@ def view_trends():
             service_response_times[service] = [0] * len(snapshots)
 
     return render_template('trends.html', snapshots=snapshots, time_labels=time_labels, system_cpu=system_cpu, system_memory=system_memory, service_response_times=service_response_times, SERVICES=SERVICES)
-
-if __name__ == '__main__':
-    # Initialize upstream configuration files
-    upstream_dir = '/etc/nginx/upstreams'
-    os.makedirs(upstream_dir, exist_ok=True)
-    
-    # Create initial dummy upstream configurations
-    upstreams = ['dify', 'n8n', 'flowise', 'openwebui', 'litellm', 'monitoring', 'openmemory', 'ollama', 'ollama-webui', 'adminer']
-    for upstream in upstreams:
-        config_file = os.path.join(upstream_dir, '{}.conf'.format(upstream))
-        # Special case for monitoring - it should always be available
-        if upstream == 'monitoring':
-            server = 'monitoring:8080'
-        else:
-            server = '127.0.0.1:1'
-        with open(config_file, 'w') as f:
-            f.write('upstream {} {{\n    server {};\n}}\n'.format(upstream, server))
-        print("Created initial upstream config: {}".format(config_file))
-    
-    app.run(host='0.0.0.0', port=8080)
