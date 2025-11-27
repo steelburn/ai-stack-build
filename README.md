@@ -92,7 +92,7 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 
 ### 📊 Monitoring & Security
 - **Monitoring Dashboard**: Comprehensive health, resource, and log monitoring
-- **Nginx Reverse Proxy**: SSL/TLS termination and load balancing
+- **Nginx Reverse Proxy**: SSL/TLS termination, load balancing, and unified access on standard ports (80/443)
 - **Security Hardening**: Firewall rules, secret management, encryption
 
 ## 🔒 Security Features
@@ -120,7 +120,16 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 - **Redis Encryption**: Password-protected Redis connections
 - **Self-signed Certificates**: Development-ready (replace with CA certs for production)
 
-### � Monitoring & Observability
+### 🌐 Nginx Reverse Proxy
+- **Unified Access**: All services accessible on standard HTTPS ports (443) only
+- **No Port Conflicts**: Eliminates need to open non-standard ports at firewall
+- **SSL Termination**: Handles SSL/TLS encryption and certificate management
+- **Load Balancing**: Distributes traffic across service instances
+- **Security Headers**: XSS, CSRF, HSTS, and Content-Type protection
+- **Rate Limiting**: API rate limiting and brute force protection
+- **Path-based Routing**: Services accessible via clean URLs (e.g., `/dify/`, `/n8n/`)
+
+### 📊 Monitoring & Observability
 - **Security Logging**: Comprehensive audit logs with rotation
 - **Health Monitoring**: Real-time service health checks with visual dashboards
 - **Resource Monitoring**: CPU, memory, network, and disk usage tracking
@@ -421,7 +430,13 @@ Each service is also accessible directly via its assigned port for development a
    # Customize harden-security.sh if needed
    ```
 
-4. **Secret Management**
+4. **Configure Public Domain (Optional)**
+   ```bash
+   # Edit .env file for production domain
+   PUBLIC_DOMAIN=https://yourdomain.com
+   ```
+
+5. **Secret Management**
    ```bash
    ./generate-secrets.sh  # Regenerate secrets
    ./generate-docker-secrets.sh  # Update Docker secrets
