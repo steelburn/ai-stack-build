@@ -10,6 +10,41 @@ help: ## Show this help message
 setup: ## Run the complete setup process
 	./setup.sh
 
+configure-domain: ## Configure public domain for nginx reverse proxy
+	@echo "🌐 Public Domain Configuration"
+	@echo "================================"
+	@echo "This will be used for proper URL configuration in production."
+	@echo "For development, you can use 'https://localhost'"
+	@echo "For production, use your actual domain like 'https://yourdomain.com'"
+	@echo
+	@if [ -f ".env" ] && grep -q "^PUBLIC_DOMAIN=" .env; then \
+		echo "Current public domain: $$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2)"; \
+		read -p "Do you want to change it? [y/N]: " change_domain; \
+		if [ "$$change_domain" = "y" ] || [ "$$change_domain" = "Y" ]; then \
+			read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN; \
+		else \
+			PUBLIC_DOMAIN=$$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2); \
+		fi; \
+	else \
+		read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN; \
+	fi; \
+	if echo "$$PUBLIC_DOMAIN" | grep -q "^https\?://"; then \
+		if grep -q "^PUBLIC_DOMAIN=" .env; then \
+			sed -i "s|^PUBLIC_DOMAIN=.*$$|PUBLIC_DOMAIN=$${PUBLIC_DOMAIN}|" .env; \
+		else \
+			echo "PUBLIC_DOMAIN=$${PUBLIC_DOMAIN}" >> .env; \
+		fi; \
+		echo "✓ Public domain set to: $${PUBLIC_DOMAIN}"; \
+	else \
+		echo "✗ Invalid domain format. Must start with http:// or https://"; \
+		echo "Using default: https://localhost"; \
+		if grep -q "^PUBLIC_DOMAIN=" .env; then \
+			sed -i "s|^PUBLIC_DOMAIN=.*$$|PUBLIC_DOMAIN=https://localhost|" .env; \
+		else \
+			echo "PUBLIC_DOMAIN=https://localhost" >> .env; \
+		fi; \
+	fi
+
 install-docker: ## Install Docker Engine and Docker Compose V2 (requires sudo)
 	@echo "Installing Docker Engine and Docker Compose V2..."
 	curl -fsSL https://get.docker.com -o get-docker.sh

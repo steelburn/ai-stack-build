@@ -172,6 +172,7 @@ curl -fsSL https://raw.githubusercontent.com/steelburn/ai-stack-build/main/insta
 This automated installer will:
 - ✅ Check system requirements (Docker, Git, etc.)
 - 📥 Clone/update the repository
+- 🌐 Configure public domain for nginx reverse proxy
 - 🔧 Set up environment configuration
 - 🔐 Generate secure credentials and secrets
 - 🐳 Configure and start all Docker services
@@ -242,6 +243,32 @@ All configuration is centralized in `.env` file. Copy the example:
 cp .env.example .env
 # Edit .env with your preferred settings
 ```
+
+### 🌐 Domain Configuration
+
+Configure your public domain for proper nginx reverse proxy routing:
+
+```bash
+# During installation (automatic)
+# The installer will prompt you for your domain
+
+# Or configure manually
+make configure-domain
+
+# Or edit .env directly
+PUBLIC_DOMAIN=https://yourdomain.com
+```
+
+**Domain Configuration Options:**
+- **Development**: `https://localhost` (default)
+- **Production**: `https://yourdomain.com` (your actual domain)
+- **Custom**: Any HTTPS URL accessible from your network
+
+**Important Notes:**
+- Domain must start with `http://` or `https://`
+- For production, ensure DNS points to your server
+- Nginx will route all services under this domain
+- SSL certificates are auto-generated for development
 
 #### Key Configuration Sections:
 
@@ -361,21 +388,25 @@ SERVICE_2_URL=http://another-service:3000/health
 ### 🔒 Secure Web Interfaces (via Nginx Reverse Proxy - SSL/TLS Protected)
 | Service | URL | Authentication | Notes |
 |---------|-----|----------------|--------|
-| **Monitoring Dashboard** | https://localhost/monitoring/ | HTTP Basic Auth | Service health & resources |
-| **Dify** | https://localhost/dify/ | Via Dify | LLM application platform |
-| **OpenWebUI** | https://localhost/openwebui/ | Built-in Auth | Web interface for LLMs |
-| **Ollama WebUI** | https://localhost/ollama-webui/ | None | Model management interface |
-| **N8N** | https://localhost/n8n/ | HTTP Basic Auth | Workflow automation |
-| **Flowise** | https://localhost/flowise/ | Built-in Auth | AI workflow builder |
-| **LiteLLM Dashboard** | https://localhost/litellm/ui/ | API Key | LLM proxy management |
-| **Database Admin (Adminer)** | https://localhost/adminer/ | HTTP Basic Auth | PostgreSQL management (when enabled) |
+| **Monitoring Dashboard** | {PUBLIC_DOMAIN}/monitoring/ | HTTP Basic Auth | Service health & resources |
+| **Dify** | {PUBLIC_DOMAIN}/dify/ | Via Dify | LLM application platform |
+| **OpenWebUI** | {PUBLIC_DOMAIN}/openwebui/ | Built-in Auth | Web interface for LLMs |
+| **Ollama WebUI** | {PUBLIC_DOMAIN}/ollama-webui/ | None | Model management interface |
+| **N8N** | {PUBLIC_DOMAIN}/n8n/ | HTTP Basic Auth | Workflow automation |
+| **Flowise** | {PUBLIC_DOMAIN}/flowise/ | Built-in Auth | AI workflow builder |
+| **LiteLLM Dashboard** | {PUBLIC_DOMAIN}/litellm/ui/ | API Key | LLM proxy management |
+| **Database Admin (Adminer)** | {PUBLIC_DOMAIN}/adminer/ | HTTP Basic Auth | PostgreSQL management (when enabled) |
+
+*Replace `{PUBLIC_DOMAIN}` with your configured domain (e.g., `https://yourdomain.com`)*
 
 ### 🔑 Secure API Endpoints (via Nginx Reverse Proxy)
 | Service | Endpoint | Authentication |
 |---------|----------|----------------|
-| **Ollama API** | https://localhost/ollama/api/generate | None |
-| **LiteLLM API** | https://localhost/litellm/chat/completions | API Key |
-| **OpenMemory API** | https://localhost/openmemory/api/v1/memories/ | None |
+| **Ollama API** | {PUBLIC_DOMAIN}/ollama/api/generate | None |
+| **LiteLLM API** | {PUBLIC_DOMAIN}/litellm/chat/completions | API Key |
+| **OpenMemory API** | {PUBLIC_DOMAIN}/openmemory/api/v1/memories/ | None |
+
+*Replace `{PUBLIC_DOMAIN}` with your configured domain (e.g., `https://yourdomain.com`)*
 
 ### 🏠 Direct Port Access (Individual Service Ports)
 Each service is also accessible directly via its assigned port for development and advanced usage:

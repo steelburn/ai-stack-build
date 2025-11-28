@@ -149,6 +149,48 @@ update_nginx_port() {
 # Validate environment before proceeding
 validate_environment
 
+# Prompt for public domain configuration
+echo "🌐 Configuring public domain..."
+echo "This will be used for proper URL configuration in production."
+echo "For development, you can use 'https://localhost'"
+echo "For production, use your actual domain like 'https://yourdomain.com'"
+echo ""
+
+# Check if PUBLIC_DOMAIN is already set
+if [ -f ".env" ] && grep -q "^PUBLIC_DOMAIN=" .env; then
+    current_domain=$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2)
+    echo "Current public domain: $current_domain"
+    read -p "Do you want to change it? [y/N]: " change_domain
+    if [[ "$change_domain" =~ ^[Yy]$ ]]; then
+        read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN
+    else
+        PUBLIC_DOMAIN="$current_domain"
+    fi
+else
+    read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN
+fi
+
+# Validate the domain format
+if [[ ! "$PUBLIC_DOMAIN" =~ ^https?:// ]]; then
+    echo "❌ Invalid domain format. Must start with http:// or https://"
+    echo "Using default: https://localhost"
+    PUBLIC_DOMAIN="https://localhost"
+fi
+
+# Update .env file with PUBLIC_DOMAIN
+if [ -f ".env" ]; then
+    if grep -q "^PUBLIC_DOMAIN=" .env; then
+        sed -i "s|^PUBLIC_DOMAIN=.*$|PUBLIC_DOMAIN=${PUBLIC_DOMAIN}|" .env
+    else
+        echo "PUBLIC_DOMAIN=${PUBLIC_DOMAIN}" >> .env
+    fi
+else
+    echo "PUBLIC_DOMAIN=${PUBLIC_DOMAIN}" > .env
+fi
+
+echo "✅ Public domain set to: $PUBLIC_DOMAIN"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Public domain configured: $PUBLIC_DOMAIN" >> "$LOG_FILE"
+
 # Source the .env file to get current values
 if [ -f ".env" ]; then
     source .env
@@ -286,13 +328,16 @@ SUPABASE_PORT=$(grep -A1 "supabase:" docker-compose.yml | grep "ports:" -A1 | gr
 NGINX_HTTP_PORT=$(grep -A2 "nginx:" docker-compose.yml | grep "ports:" -A2 | grep '"8080:80"' | cut -d'"' -f2 | cut -d':' -f1 || echo "8080")
 NGINX_HTTPS_PORT=$(grep -A2 "nginx:" docker-compose.yml | grep "ports:" -A2 | grep '"443:443"' | cut -d'"' -f2 | cut -d':' -f1 || echo "443")
 
-echo "  Dify:        https://localhost:$NGINX_HTTPS_PORT/dify"
-echo "  N8N:         https://localhost:$NGINX_HTTPS_PORT/n8n"
-echo "  Flowise:     https://localhost:$NGINX_HTTPS_PORT/flowise"
-echo "  OpenWebUI:   https://localhost:$NGINX_HTTPS_PORT/openwebui"
-echo "  LiteLLM:     https://localhost:$NGINX_HTTPS_PORT/litellm"
-echo "  Monitoring:  https://localhost:$NGINX_HTTPS_PORT/monitoring"
-echo "  Adminer:     https://localhost:$NGINX_HTTPS_PORT/adminer"
+# Get PUBLIC_DOMAIN from .env file
+PUBLIC_DOMAIN=$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2 || echo "https://localhost")
+
+echo "  Dify:        $PUBLIC_DOMAIN/dify"
+echo "  N8N:         $PUBLIC_DOMAIN/n8n"
+echo "  Flowise:     $PUBLIC_DOMAIN/flowise"
+echo "  OpenWebUI:   $PUBLIC_DOMAIN/openwebui"
+echo "  LiteLLM:     $PUBLIC_DOMAIN/litellm"
+echo "  Monitoring:  $PUBLIC_DOMAIN/monitoring"
+echo "  Adminer:     $PUBLIC_DOMAIN/adminer"
 echo ""
 echo "  Direct access (if needed):"
 echo "  LiteLLM API: http://localhost:$LITELLM_PORT"
