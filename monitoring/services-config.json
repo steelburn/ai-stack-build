@@ -1,16 +1,13 @@
 {
   "dify-api": {
-    "url": "http://dify-api:8080/health",
+    "url": "http://dify-api:5001/health",
     "name": "Dify API"
   },
   "dify-web": {
-    "url": "http://dify-web:3000/health",
+    "url": "http://dify-web:3000/",
     "name": "Dify Web"
   },
-  "dify-worker": {
-    "url": "http://dify-worker:8080/health",
-    "name": "Dify Worker"
-  },
+
   "ollama": {
     "url": "http://ollama:11434/api/version",
     "name": "Ollama"
@@ -20,7 +17,7 @@
     "name": "Ollama WebUI"
   },
   "litellm": {
-    "url": "http://litellm:4000/health",
+    "url": "http://litellm:4000/",
     "name": "LiteLLM"
   },
   "openmemory": {
@@ -32,7 +29,7 @@
     "name": "N8N"
   },
   "flowise": {
-    "url": "http://flowise:3000/api/v1/health",
+    "url": "http://flowise:3000/",
     "name": "Flowise"
   },
   "openwebui": {
@@ -40,7 +37,7 @@
     "name": "OpenWebUI"
   },
   "qdrant": {
-    "url": "http://qdrant:6333/health",
+    "url": "http://qdrant:6333/",
     "name": "Qdrant"
   },
   "adminer": {
