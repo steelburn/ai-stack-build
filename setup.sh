@@ -8,7 +8,8 @@ exec 2>>"$LOG_FILE"  # Redirect stderr to log file
 
 # Error handling
 error_handler() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Setup failed at line $LINENO with exit code $? - Check log file: $LOG_FILE" >> "$LOG_FILE"
+    local exit_code=$?
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Setup failed at line $LINENO with exit code $exit_code - Check log file: $LOG_FILE" >> "$LOG_FILE"
     exit 1
 }
 trap error_handler ERR

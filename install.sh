@@ -48,7 +48,7 @@ log_error() {
 }
 
 # Error handling
-trap 'log_error "Installer failed at line $LINENO with exit code $?"; log_info "Check log file: $LOG_FILE"; exit 1' ERR
+trap 'exit_code=$?; log_error "Installer failed at line $LINENO with exit code $exit_code"; log_info "Check log file: $LOG_FILE"; exit 1' ERR
 
 # Log script start
 log_info "=== AI Stack Build Installer Started ==="
