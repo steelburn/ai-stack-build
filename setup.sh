@@ -211,6 +211,13 @@ update_nginx_port() {
 # Validate environment before proceeding
 validate_environment
 
+# Check if running interactively
+if [[ -t 0 && -t 1 ]]; then
+    INTERACTIVE=true
+else
+    INTERACTIVE=false
+fi
+
 # Prompt for public domain configuration
 echo "🌐 Configuring public domain..."
 echo "This will be used for proper URL configuration in production."
@@ -222,14 +229,24 @@ echo ""
 if [ -f ".env" ] && grep -q "^PUBLIC_DOMAIN=" .env; then
     current_domain=$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2)
     echo "Current public domain: $current_domain"
-    read -p "Do you want to change it? [y/N]: " change_domain
-    if [[ "$change_domain" =~ ^[Yy]$ ]]; then
-        read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN
+    if [ "$INTERACTIVE" = true ]; then
+        read -p "Do you want to change it? [y/N]: " change_domain
+        if [[ "$change_domain" =~ ^[Yy]$ ]]; then
+            read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN
+        else
+            PUBLIC_DOMAIN="$current_domain"
+        fi
     else
+        log_info "Running non-interactively, keeping current domain: $current_domain"
         PUBLIC_DOMAIN="$current_domain"
     fi
 else
-    read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN
+    if [ "$INTERACTIVE" = true ]; then
+        read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN
+    else
+        log_info "Running non-interactively, using default domain: https://localhost"
+        PUBLIC_DOMAIN="https://localhost"
+    fi
 fi
 
 # Validate the domain format
