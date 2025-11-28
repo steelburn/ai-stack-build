@@ -383,18 +383,31 @@ check_and_pull_images() {
         echo "       PROBLEMATIC_IMAGE=your-public/alternative:latest curl -fsSL <url> | bash"
         echo "  3) Remove/disable optional services in docker-compose.yml that reference private images."
         echo
-        read -p "Would you like to attempt 'docker login' now? [y/N]: " resp
-        resp=${resp:-N}
-        if [[ "$resp" =~ ^[Yy]$ ]]; then
-            log_info "Starting 'docker login'..."
-            docker login || { log_error "docker login failed."; exit 1; }
-            log_info "Re-attempting to pull failed images..."
-            for img in "${failed[@]}"; do
-                docker pull "$img" || { log_error "Still cannot pull $img after login. Aborting."; exit 1; }
-            done
-            log_success "All previously failed images pulled successfully after login."
+
+        # Check if running interactively
+        if [[ -t 0 && -t 1 ]]; then
+            INTERACTIVE=true
         else
-            log_error "Image pull failures detected. Installer cannot continue until the images are available or overrides are provided."
+            INTERACTIVE=false
+        fi
+
+        if [ "$INTERACTIVE" = true ]; then
+            read -p "Would you like to attempt 'docker login' now? [y/N]: " resp
+            resp=${resp:-N}
+            if [[ "$resp" =~ ^[Yy]$ ]]; then
+                log_info "Starting 'docker login'..."
+                docker login || { log_error "docker login failed."; exit 1; }
+                log_info "Re-attempting to pull failed images..."
+                for img in "${failed[@]}"; do
+                    docker pull "$img" || { log_error "Still cannot pull $img after login. Aborting."; exit 1; }
+                done
+                log_success "All previously failed images pulled successfully after login."
+            else
+                log_error "Image pull failures detected. Installer cannot continue until the images are available or overrides are provided."
+                exit 1
+            fi
+        else
+            log_error "Image pull failures detected in non-interactive mode. Please resolve authentication issues or provide image overrides before running the installer."
             exit 1
         fi
     fi
@@ -403,6 +416,13 @@ check_and_pull_images() {
 # Setup services configuration
 setup_services_config() {
     log_info "Configuring services..."
+
+    # Check if running interactively
+    if [[ -t 0 && -t 1 ]]; then
+        INTERACTIVE=true
+    else
+        INTERACTIVE=false
+    fi
 
     # Prompt for public domain
     echo
@@ -417,14 +437,24 @@ setup_services_config() {
     if [ -f ".env" ] && grep -q "^PUBLIC_DOMAIN=" .env; then
         current_domain=$(grep "^PUBLIC_DOMAIN=" .env | cut -d'=' -f2)
         echo "Current public domain: $current_domain"
-        read -p "Do you want to change it? [y/N]: " change_domain
-        if [[ "$change_domain" =~ ^[Yy]$ ]]; then
-            read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN
+        if [ "$INTERACTIVE" = true ]; then
+            read -p "Do you want to change it? [y/N]: " change_domain
+            if [[ "$change_domain" =~ ^[Yy]$ ]]; then
+                read -p "Enter your public domain (e.g., https://yourdomain.com): " PUBLIC_DOMAIN
+            else
+                PUBLIC_DOMAIN="$current_domain"
+            fi
         else
+            log_info "Running non-interactively, keeping current domain: $current_domain"
             PUBLIC_DOMAIN="$current_domain"
         fi
     else
-        read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN
+        if [ "$INTERACTIVE" = true ]; then
+            read -p "Enter your public domain (e.g., https://yourdomain.com or https://localhost for development): " PUBLIC_DOMAIN
+        else
+            log_info "Running non-interactively, using default domain: https://localhost"
+            PUBLIC_DOMAIN="https://localhost"
+        fi
     fi
 
     # Validate the domain format

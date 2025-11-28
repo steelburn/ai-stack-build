@@ -50,20 +50,20 @@ mkdir -p secrets
 
 # Create individual secret files for Docker
 echo "Creating Docker secret files..."
-echo -n "$DB_PASSWORD" > secrets/db_password.txt
-echo -n "$REDIS_PASSWORD" > secrets/redis_password.txt
-echo -n "$QDRANT_API_KEY" > secrets/qdrant_api_key.txt
-echo -n "$LITELLM_MASTER_KEY" > secrets/litellm_master_key.txt
-echo -n "$LITELLM_SALT_KEY" > secrets/litellm_salt_key.txt
-echo -n "$N8N_ENCRYPTION_KEY" > secrets/n8n_encryption_key.txt
-echo -n "$FLOWWISE_SECRETKEY" > secrets/flowise_secret_key.txt
-echo -n "$OPENWEBUI_SECRET_KEY" > secrets/openwebui_secret_key.txt
+echo -n "$DB_PASSWORD" > secrets/ai-stack_db_password.txt
+echo -n "$REDIS_PASSWORD" > secrets/ai-stack_redis_password.txt
+echo -n "$QDRANT_API_KEY" > secrets/ai-stack_qdrant_api_key.txt
+echo -n "$LITELLM_MASTER_KEY" > secrets/ai-stack_litellm_master_key.txt
+echo -n "$LITELLM_SALT_KEY" > secrets/ai-stack_litellm_salt_key.txt
+echo -n "$N8N_ENCRYPTION_KEY" > secrets/ai-stack_n8n_encryption_key.txt
+echo -n "$FLOWISE_SECRETKEY" > secrets/ai-stack_flowise_secret_key.txt
+echo -n "$OPENWEBUI_SECRET_KEY" > secrets/ai-stack_openwebui_secret_key.txt
 
 # Create monitoring credentials (these are not auto-generated, use defaults or prompt user)
-echo -n "${MONITORING_USERNAME:-admin}" > secrets/monitoring_username.txt
-echo -n "${MONITORING_PASSWORD:-$(generate_password)}" > secrets/monitoring_password.txt
-echo -n "${UI_USERNAME:-admin}" > secrets/ui_username.txt
-echo -n "${UI_PASSWORD:-$LITELLM_MASTER_KEY}" > secrets/ui_password.txt
+echo -n "${MONITORING_USERNAME:-admin}" > secrets/ai-stack_monitoring_username.txt
+echo -n "${MONITORING_PASSWORD:-$(generate_password)}" > secrets/ai-stack_monitoring_password.txt
+echo -n "${UI_USERNAME:-admin}" > secrets/ai-stack_ui_username.txt
+echo -n "${UI_PASSWORD:-$LITELLM_MASTER_KEY}" > secrets/ai-stack_ui_password.txt
 
 # Update .env file
 echo "Updating .env file with secure secrets..."
