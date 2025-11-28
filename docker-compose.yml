@@ -408,6 +408,7 @@ services:
       monitoring:
         condition: service_started
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_config:/etc/nginx/conf.d/upstreams
     networks:
       - ai-stack
