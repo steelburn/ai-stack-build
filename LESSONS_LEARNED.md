@@ -142,12 +142,14 @@ This document captures the key lessons, mistakes, and insights gained during the
 - Maintenance burden when updating shared functionality
 - Risk of bugs when one copy is updated but others are forgotten
 - Misleading error messages due to improper trap handler implementation
+- **RESOLVED:** Interactive script issues fixed with non-interactive mode support
 
 **Root Cause:**
 - Scripts developed independently without shared library planning
 - No established pattern for common shell script utilities
 - Trap handlers not capturing exit codes immediately, causing "exit code 0" messages for failures
 - Lack of centralized logging and error handling functions
+- **RESOLVED:** Added TTY detection and fallback defaults for automated deployment
 
 **The Solution:**
 - Created unified common library (`lib/common.sh`) with shared functions
@@ -155,9 +157,10 @@ This document captures the key lessons, mistakes, and insights gained during the
 - Fixed trap handlers to capture exit codes immediately using proper bash variable scoping
 - Refactored all scripts to source the common library and use unified functions
 - Established pattern for shared utilities and error handling
+- **ADDED:** Interactive/non-interactive execution mode detection
 
 **Lesson Learned:**
-> **Eliminate code duplication through shared libraries.** Create centralized utilities for common functionality, implement consistent error handling patterns, and fix trap handlers immediately to capture actual exit codes. Treat script maintainability as seriously as application code quality.
+> **Eliminate code duplication through shared libraries.** Create centralized utilities for common functionality, implement consistent error handling patterns, and fix trap handlers immediately to capture actual exit codes. Treat script maintainability as seriously as application code quality. **Always design for both interactive and automated execution environments.**
 
 ---
 
@@ -307,6 +310,10 @@ This document captures the key lessons, mistakes, and insights gained during the
 - ✅ **Automated CI/CD** with security scanning
 - ✅ **Complete Documentation** with troubleshooting guides
 - ✅ **Backup & Recovery** with automated procedures
+- ✅ **Non-Interactive Deployment** supporting automated installations
+- ✅ **Cross-Host Compatibility** with resolved secret file naming
+- ✅ **Nginx Reverse Proxy** with dynamic upstream configuration
+- ✅ **Static Asset Resolution** in containerized monitoring dashboard
 
 ### Quality Improvements
 - **Zero Downtime Deployments**: Automated deployment with rollback
@@ -322,6 +329,9 @@ This document captures the key lessons, mistakes, and insights gained during the
 3. **Security First**: Design security into every component
 4. **Monitor Relentlessly**: You can't manage what you can't measure
 5. **Plan for Scale**: Design for growth from day one
+6. **Design for Automation**: Support both interactive and non-interactive execution
+7. **Validate All Paths**: Test configuration file paths and port mappings thoroughly
+8. **Test in Target Environment**: Verify functionality in containerized/production context
 
 ### For Complex Systems
 1. **Consistent Patterns**: Establish and enforce consistent design patterns
@@ -337,63 +347,130 @@ This document captures the key lessons, mistakes, and insights gained during the
 
 ---
 
-### 5. Version Compatibility Pitfalls
+### 7. Interactive Script Deployment Issues
 
 **The Problem:**
-- Redis service failed to start with "Bad directive" error
-- Used `requirepassfile` directive incompatible with Redis 6.x
-- Dify storage configuration missing critical environment variables
-- OpenDAL storage backend failed with "root is not specified" error
+- `install.sh` script would hang when run via `curl -fsSL | bash` due to interactive prompts
+- Users couldn't deploy non-interactively in automated environments
+- Public domain configuration required manual input even for development setups
+- Docker login prompts would fail in headless environments
 
 **Root Cause:**
-- Assumption that newer Redis features were backward compatible
-- Incomplete research on Docker image versions and feature availability
-- Missing storage configuration in environment templates
-- Lack of comprehensive environment variable validation
+- Scripts designed only for interactive use without non-interactive fallbacks
+- No detection of execution environment (TTY vs pipe)
+- Hard-coded interactive prompts without default values
+- Assumption that all deployments would be interactive
 
 **The Solution:**
-- Implemented version-aware Redis configuration using shell command substitution
-- Added comprehensive environment validation in setup scripts
-- Updated documentation with version-specific requirements
-- Created automated checks for required environment variables
+- Added TTY detection to identify interactive vs non-interactive execution
+- Implemented fallback defaults for non-interactive mode (e.g., `https://localhost` for domain)
+- Added graceful handling of Docker login failures in automated environments
+- Created consistent patterns for optional interactive features
 
-**Technical Details:**
+**Technical Implementation:**
 ```bash
-# Redis 6.x compatible configuration
-command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+# Detect interactive execution
+if [[ -t 0 && -t 1 ]]; then
+    INTERACTIVE=true
+else
+    INTERACTIVE=false
+fi
 
-# Required Dify storage variables
-STORAGE_TYPE=local
-STORAGE_LOCAL_PATH=/app/api/storage
+# Use appropriate behavior based on context
+if [ "$INTERACTIVE" = true ]; then
+    read -p "Enter domain: " PUBLIC_DOMAIN
+else
+    PUBLIC_DOMAIN="https://localhost"  # Default for non-interactive
+fi
 ```
 
 **Lesson Learned:**
-> **Always verify version compatibility and feature availability.** Research Docker image versions thoroughly and implement environment validation to catch configuration issues early. Treat version mismatches as critical failures.
+> **Design scripts for both interactive and automated execution.** Always detect the execution environment and provide sensible defaults for non-interactive scenarios. Treat automated deployment as a first-class use case.
 
 ---
 
-### 6. Storage Configuration Complexity
+### 8. Docker Compose Project Naming Conflicts
 
 **The Problem:**
-- Dify services failed to start due to missing storage configuration
-- OpenDAL library required specific environment variables
-- File upload functionality broken without proper storage setup
-- No validation of storage backend requirements
+- `COMPOSE_PROJECT_NAME` caused inconsistent secret file path resolution
+- Services would fail to start with "secret file not found" errors
+- Cross-host deployments had different naming expectations
+- Docker Compose prefixing behavior was unpredictable
 
 **Root Cause:**
-- Incomplete environment variable templates
-- Assumption that default storage would work
-- Lack of understanding of OpenDAL configuration requirements
-- No testing of file upload/storage functionality
+- Misunderstanding of how `COMPOSE_PROJECT_NAME` affects secret file paths
+- Inconsistent prefixing behavior between different Docker Compose operations
+- No testing across different deployment environments
+- Assumption that project naming was purely cosmetic
 
 **The Solution:**
-- Added storage configuration to all relevant files (.env, .env.example, docker-compose.yml)
-- Implemented environment validation to catch missing variables
-- Updated documentation with storage requirements
-- Added troubleshooting section for storage issues
+- Removed `COMPOSE_PROJECT_NAME` to eliminate prefixing complexity
+- Used direct, predictable secret file paths without prefix manipulation
+- Ensured consistent file naming across all environments
+- Simplified Docker Compose configuration for reliability
 
 **Lesson Learned:**
-> **Storage configuration is critical infrastructure.** Always include complete storage backend configuration in environment templates and validate all required variables before service startup.
+> **Avoid unnecessary complexity in container orchestration.** `COMPOSE_PROJECT_NAME` can introduce subtle path resolution issues. Use direct paths when possible and test across different deployment scenarios.
+
+---
+
+### 9. Nginx Upstream Configuration Path Mismatches
+
+**The Problem:**
+- Nginx reverse proxy couldn't find upstream configuration files
+- Services connected to wrong ports (port 1 instead of actual service ports)
+- Monitoring service created upstream configs in wrong directory
+- Dynamic upstream updates failed silently
+
+**Root Cause:**
+- Mismatch between where monitoring service wrote configs (`/etc/nginx/upstreams/`) and where nginx looked for them (`/etc/nginx/conf.d/upstreams/`)
+- Incorrect port mappings in upstream configuration generation
+- Volume mount paths didn't align with nginx include directives
+- No validation of upstream configuration effectiveness
+
+**The Solution:**
+- Corrected upstream configuration directory paths
+- Fixed volume mounts to match nginx include paths
+- Updated port mappings to match actual service ports (e.g., dify-api:5001 not 8080)
+- Added proper upstream configuration validation
+
+**Technical Details:**
+```yaml
+# Monitoring service volume mount
+volumes:
+  - nginx_config:/etc/nginx/conf.d/upstreams  # Correct path
+
+# Nginx include directive
+include /etc/nginx/conf.d/upstreams/*.conf;  # Matching path
+```
+
+**Lesson Learned:**
+> **Validate all configuration paths and port mappings.** Dynamic configuration generation must match the consuming service's expectations. Test configuration file discovery and loading mechanisms thoroughly.
+
+---
+
+### 10. Static Asset Path Resolution Issues
+
+**The Problem:**
+- Monitoring dashboard CSS and JavaScript files failed to load
+- Flask template static paths were incorrect for the application structure
+- Absolute paths (`/static/`) didn't resolve in the container context
+- User interface appeared broken with missing styles and functionality
+
+**Root Cause:**
+- Incorrect static file path assumptions in HTML templates
+- Mismatch between Flask static file serving and template references
+- No testing of frontend asset loading in containerized environment
+- Absolute paths that worked in development but not in production
+
+**The Solution:**
+- Updated template paths to use relative references (`static/` instead of `/static/`)
+- Verified Flask static file serving configuration
+- Tested asset loading in containerized environment
+- Established consistent path patterns for static assets
+
+**Lesson Learned:**
+> **Test frontend assets in the target deployment environment.** Static file paths that work in development may not work in containers. Always verify asset loading in the production-like environment.
 
 ---
 
