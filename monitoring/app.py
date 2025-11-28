@@ -538,7 +538,7 @@ def after_request(response):
 @app.route('/')
 # @requires_auth
 def index():
-    return app.send_static_file('index.html')
+    return render_template('index.html')
 
 @app.route('/api/status')
 def api_status():

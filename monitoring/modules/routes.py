@@ -22,8 +22,8 @@ from .metrics import (
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__,
-                static_folder='static',
-                template_folder='templates')
+                static_folder='/app/static',
+                template_folder='/app/templates')
 
     # Enable CORS for all origins (commented out as in original)
     # CORS(app, resources={
@@ -89,7 +89,7 @@ def create_app():
     @app.route('/')
     # @requires_auth
     def index():
-        return app.send_static_file('index.html')
+        return render_template('index.html')
 
     @app.route('/api/status')
     def api_status():

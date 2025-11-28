@@ -8,6 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY services-config.json .
 COPY static/ ./static/
+COPY templates/ ./templates/
+COPY modules/ ./modules/
 
 EXPOSE 8080
 

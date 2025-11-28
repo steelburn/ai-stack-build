@@ -352,7 +352,7 @@ services:
     build: ./monitoring
     restart: always
     ports:
-      - "${MONITORING_PORT}:5000"
+      - "${MONITORING_PORT}:8080"
     environment:
       MONITORING_USERNAME_FILE: /run/secrets/monitoring_username
       MONITORING_PASSWORD_FILE: /run/secrets/monitoring_password
@@ -376,7 +376,8 @@ services:
     environment:
       VITE_API_BASE: /api
     depends_on:
-      - dockety-backend
+      dockety-backend:
+        condition: service_started
     networks:
       - ai-stack
 
@@ -389,7 +390,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - dockety_data:/app/data
     networks:
-      - ai-stack
+      ai-stack:
+        aliases:
+          - backend
 
   # === REVERSE PROXY (Nginx with SSL) ===
   nginx:
