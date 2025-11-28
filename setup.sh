@@ -2,37 +2,29 @@
 
 # AI Stack Setup Script
 
-# Error logging setup (same as installer)
-LOG_FILE="${HOME}/ai-stack-install.log"
-exec 2>>"$LOG_FILE"  # Redirect stderr to log file
+# Source common library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/common.sh"
 
-# Error handling
-error_handler() {
-    local exit_code=$?
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Setup failed at line $LINENO with exit code $exit_code - Check log file: $LOG_FILE" >> "$LOG_FILE"
-    exit 1
-}
-trap error_handler ERR
+# Setup error handling
+setup_error_handling
 
-echo "🚀 Setting up AI Stack..."
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Setup script started" >> "$LOG_FILE"
+log_info "Setup script started"
 
 # Function to validate required environment variables
 validate_environment() {
-    echo "🔍 Validating environment configuration..."
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Validating environment variables" >> "$LOG_FILE"
+    log_info "🔍 Validating environment configuration..."
 
     local missing_vars=()
 
     # Check for .env file and create from template if it doesn't exist
     if [ ! -f ".env" ]; then
         if [ -f ".env.example" ]; then
-            echo "📋 Creating .env file from template..."
+            log_info "📋 Creating .env file from template..."
             cp .env.example .env
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Created .env file from .env.example" >> "$LOG_FILE"
+            log_simple "INFO" "Created .env file from .env.example"
         else
-            echo "❌ .env file not found and .env.example template is missing."
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Both .env and .env.example files not found" >> "$LOG_FILE"
+            log_error ".env file not found and .env.example template is missing."
             exit 1
         fi
     fi
@@ -61,17 +53,15 @@ validate_environment() {
     done
 
     if [ ${#missing_vars[@]} -ne 0 ]; then
-        echo "❌ Missing required environment variables:"
+        log_error "Missing required environment variables:"
         printf '  - %s\n' "${missing_vars[@]}"
         echo ""
         echo "Please check your .env file and ensure all required variables are set."
         echo "You can copy from .env.example: cp .env.example .env"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Missing environment variables: ${missing_vars[*]}" >> "$LOG_FILE"
         exit 1
     fi
 
-    echo "✅ Environment validation passed!"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Environment validation passed" >> "$LOG_FILE"
+    log_success "Environment validation passed!"
 }
 
 # Function to check if a port is in use
@@ -173,8 +163,8 @@ fi
 
 # Validate the domain format
 if [[ ! "$PUBLIC_DOMAIN" =~ ^https?:// ]]; then
-    echo "❌ Invalid domain format. Must start with http:// or https://"
-    echo "Using default: https://localhost"
+    log_warning "Invalid domain format. Must start with http:// or https://"
+    log_info "Using default: https://localhost"
     PUBLIC_DOMAIN="https://localhost"
 fi
 
@@ -189,8 +179,7 @@ else
     echo "PUBLIC_DOMAIN=${PUBLIC_DOMAIN}" > .env
 fi
 
-echo "✅ Public domain set to: $PUBLIC_DOMAIN"
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Public domain configured: $PUBLIC_DOMAIN" >> "$LOG_FILE"
+log_success "Public domain set to: $PUBLIC_DOMAIN"
 
 # Source the .env file to get current values
 if [ -f ".env" ]; then
@@ -198,8 +187,7 @@ if [ -f ".env" ]; then
 fi
 
 # Port assignments and conflict resolution
-echo "🔌 Assigning available ports for services..."
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] Assigning ports for services" >> "$LOG_FILE"
+log_info "🔌 Assigning available ports for services..."
 
 # Define service ports with defaults
 declare -A service_ports=(
@@ -216,6 +204,7 @@ declare -A service_ports=(
     ["NGINX_HTTP_PORT"]="8080"
     ["RABBITMQ_PORT"]="5672"
     ["RABBITMQ_MANAGEMENT_PORT"]="15672"
+    ["DOCKETY_PORT"]="8090"
 )
 
 # Function to update .env file
@@ -234,16 +223,16 @@ for var in "${!service_ports[@]}"; do
     current_port=${!var:-$default_port}
     
     if check_port "$current_port"; then
-        echo "⚠️  Port $current_port (${var}) is already in use. Finding alternative..."
+        log_warning "Port $current_port (${var}) is already in use. Finding alternative..."
         new_port=$(find_available_port $((current_port + 1)))
         if [ $? -eq 0 ]; then
             update_env_port "$var" "$new_port"
-            echo "✅ ${var} port changed to $new_port"
+            log_success "${var} port changed to $new_port"
         else
-            echo "❌ Could not find available port for ${var}"
+            log_error "Could not find available port for ${var}"
         fi
     else
-        echo "✅ Port $current_port (${var}) is available"
+        log_info "Port $current_port (${var}) is available"
         # Ensure it's set in .env
         if ! grep -q "^${var}=" .env; then
             echo "${var}=${current_port}" >> .env
@@ -253,21 +242,21 @@ done
 
 # Special check for Nginx HTTPS (443)
 if check_port 443; then
-    echo "⚠️  Port 443 (Nginx HTTPS) is already in use. Finding alternative..."
+    log_warning "Port 443 (Nginx HTTPS) is already in use. Finding alternative..."
     NEW_NGINX_HTTPS_PORT=$(find_available_port 8443)
     if [ $? -eq 0 ]; then
         update_docker_compose_port "nginx" "443:443" "${NEW_NGINX_HTTPS_PORT}:443"
-        echo "✅ Nginx HTTPS port changed to $NEW_NGINX_HTTPS_PORT"
+        log_success "Nginx HTTPS port changed to $NEW_NGINX_HTTPS_PORT"
     fi
 else
-    echo "✅ Port 443 (Nginx HTTPS) is available"
+    log_info "Port 443 (Nginx HTTPS) is available"
 fi
 
-echo "✅ Port conflict resolution complete"
+log_success "Port conflict resolution complete"
 
 # Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo "🐳 Docker not found. Installing Docker Engine..."
+if ! command_exists docker; then
+    log_info "🐳 Docker not found. Installing Docker Engine..."
     # Install Docker silently
     curl -fsSL https://get.docker.com -o get-docker.sh
     sudo sh get-docker.sh > /dev/null 2>&1
@@ -279,36 +268,36 @@ if ! command -v docker &> /dev/null; then
     sudo systemctl enable docker > /dev/null 2>&1
     sudo systemctl start docker > /dev/null 2>&1
 
-    echo "✅ Docker installed successfully"
-    echo "⚠️  Please log out and back in for Docker group changes to take effect"
+    log_success "Docker installed successfully"
+    log_warning "Please log out and back in for Docker group changes to take effect"
 else
-    echo "✅ Docker is already installed"
+    log_info "✅ Docker is already installed"
 fi
 
 # Check if Docker Compose is available
 if ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose V2 not found. Installing..."
+    log_error "Docker Compose V2 not found. Installing..."
     # Docker Compose V2 is included with Docker Engine now
-    echo "Docker Compose should be available with Docker Engine. Please restart your terminal session."
+    log_info "Docker Compose should be available with Docker Engine. Please restart your terminal session."
     exit 1
 else
-    echo "✅ Docker Compose is available"
+    log_info "✅ Docker Compose is available"
 fi
 
 # Create necessary directories
-echo "📁 Creating directories..."
+log_info "📁 Creating directories..."
 mkdir -p config
 mkdir -p volumes
 
 # .env file is now created in validate_environment() if needed
-echo "✅ .env file ready"
+log_success ".env file ready"
 
 # Pull images
-echo "📦 Pulling Docker images..."
+log_info "📦 Pulling Docker images..."
 docker compose pull
 
 # Ensure Docker Compose build is run (use Docker Compose V2 syntax)
-echo "🚀 Building Docker images..."
+log_info "🚀 Building Docker images..."
 docker compose build
 
 # Ensure memory overcommit is enabled for Redis
@@ -319,7 +308,7 @@ if ! grep -q '^vm.overcommit_memory=1' /etc/sysctl.conf; then
   echo 'vm.overcommit_memory=1' | sudo tee -a /etc/sysctl.conf
 fi
 
-echo "✅ Setup complete!"
+log_success "Setup complete!"
 echo ""
 echo "🌐 Access your services:"
 
@@ -339,6 +328,7 @@ echo "  OpenWebUI:   $PUBLIC_DOMAIN/openwebui"
 echo "  LiteLLM:     $PUBLIC_DOMAIN/litellm"
 echo "  Monitoring:  $PUBLIC_DOMAIN/monitoring"
 echo "  Adminer:     $PUBLIC_DOMAIN/adminer"
+echo "  Dockety:     $PUBLIC_DOMAIN/dockety"
 echo ""
 echo "  Direct access (if needed):"
 echo "  LiteLLM API: http://localhost:$LITELLM_PORT"

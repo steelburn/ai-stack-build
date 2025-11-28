@@ -134,6 +134,33 @@ This document captures the key lessons, mistakes, and insights gained during the
 
 ---
 
+### 6. Code Duplication and Maintenance Burden
+
+**The Problem:**
+- Identical functions duplicated across multiple shell scripts (install.sh, setup.sh)
+- Inconsistent error handling and logging patterns
+- Maintenance burden when updating shared functionality
+- Risk of bugs when one copy is updated but others are forgotten
+- Misleading error messages due to improper trap handler implementation
+
+**Root Cause:**
+- Scripts developed independently without shared library planning
+- No established pattern for common shell script utilities
+- Trap handlers not capturing exit codes immediately, causing "exit code 0" messages for failures
+- Lack of centralized logging and error handling functions
+
+**The Solution:**
+- Created unified common library (`lib/common.sh`) with shared functions
+- Implemented consistent logging functions (log_info, log_success, log_warning, log_error)
+- Fixed trap handlers to capture exit codes immediately using proper bash variable scoping
+- Refactored all scripts to source the common library and use unified functions
+- Established pattern for shared utilities and error handling
+
+**Lesson Learned:**
+> **Eliminate code duplication through shared libraries.** Create centralized utilities for common functionality, implement consistent error handling patterns, and fix trap handlers immediately to capture actual exit codes. Treat script maintainability as seriously as application code quality.
+
+---
+
 ## 🔧 Technical Challenges & Solutions
 
 ### Multi-Service Orchestration Complexity

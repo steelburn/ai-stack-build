@@ -47,5 +47,13 @@
     "url": "http://adminer:8080/",
     "name": "Database Admin (Adminer)",
     "optional": true
+  },
+  "dockety": {
+    "url": "http://dockety:80/",
+    "name": "Dockety Docker Management"
+  },
+  "dockety-backend": {
+    "url": "http://dockety-backend:3001/health",
+    "name": "Dockety Backend"
   }
 }

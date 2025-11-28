@@ -1,3 +1,15 @@
+[Current] - feat: Add Dockety Docker container management dashboard (steelburn, now)
+- Integrated Dockety frontend and backend services for comprehensive Docker management
+- Added nginx routing for /dockety/ path with proper proxy configuration
+- Included Dockety in monitoring dashboard health checks
+- Added DOCKETY_PORT=8090 to environment configuration
+- Updated documentation and service access URLs
+[Current] - refactor: Create unified common library (lib/common.sh) and eliminate code duplication between install.sh and setup.sh (steelburn, now)
+- Created lib/common.sh with shared functions: logging (log_info/log_success/log_warning/log_error), error handling, command checking
+- Refactored install.sh to source common.sh and remove duplicate functions
+- Refactored setup.sh to use unified logging functions instead of echo statements
+- Fixed trap handlers in generate-secrets.sh and generate-ssl.sh to properly capture exit codes
+- Improved maintainability and consistency across all shell scripts
 [Current] - feat: Expose individual ports for all public services with automatic port conflict resolution (steelburn, now)
 9ef406d - Fix CSP policy for monitoring dashboard (steelburn, 2 minutes ago)
 6858442 - Allow external access to monitoring dashboard (steelburn, 3 hours ago)

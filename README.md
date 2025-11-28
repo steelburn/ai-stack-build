@@ -27,7 +27,7 @@ A comprehensive, production-ready Docker Compose setup for deploying a full AI a
 
 This project provides a complete, secure, and monitored AI application stack deployment featuring:
 
-- **15+ AI Services**: From LLM hosting to workflow automation
+- **16+ AI Services**: From LLM hosting to workflow automation and container management
 - **Enterprise Security**: Authentication, encryption, network segmentation
 - **Comprehensive Monitoring**: Health checks, resource monitoring, log aggregation
 - **Production Ready**: SSL/TLS, secrets management, backup strategies
@@ -40,10 +40,10 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    🌐 Nginx Reverse Proxy (SSL/TLS)              │
-│                    ┌─────────────────────────────────────┐       │
-│                    │         Monitoring Dashboard        │       │
-│                    │    (Health + Resources + Logs)     │       │
-│                    └─────────────────────────────────────┘       │
+│         ┌─────────────────────────────────┐ ┌─────────────────┐ │
+│         │     Monitoring Dashboard        │ │   Dockety        │ │
+│         │ (Health + Resources + Logs)     │ │ Docker Mgmt      │ │
+│         └─────────────────────────────────┘ └─────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                     │
                     ┌───────────────┼───────────────┐
@@ -92,6 +92,7 @@ Perfect for developers, researchers, and organizations looking to deploy AI appl
 
 ### 📊 Monitoring & Security
 - **Monitoring Dashboard**: Comprehensive health, resource, and log monitoring
+- **[Dockety](https://github.com/steelburn/dockety)**: Advanced Docker container management and monitoring dashboard
 - **Nginx Reverse Proxy**: SSL/TLS termination, load balancing, and unified access on standard ports (80/443)
 - **Security Hardening**: Firewall rules, secret management, encryption
 

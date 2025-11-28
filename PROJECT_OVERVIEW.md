@@ -13,9 +13,9 @@ The AI Stack Build is a comprehensive, production-ready containerized AI service
 │                    AI Stack Build                           │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Nginx     │  │ Monitoring  │  │   Backup    │         │
-│  │  (Reverse   │  │   Dashboard │  │   System    │         │
-│  │   Proxy +   │  │  + Adminer  │  │             │         │
+│  │   Nginx     │  │ Monitoring  │  │   Dockety   │         │
+│  │  (Reverse   │  │   Dashboard │  │  (Docker    │         │
+│  │   Proxy +   │  │  + Adminer  │  │   Mgmt)     │         │
 │  │   SSL/TLS)  │  │   Status     │  │             │         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 ├─────────────────────────────────────────────────────────────┤

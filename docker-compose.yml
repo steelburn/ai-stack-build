@@ -367,6 +367,30 @@ services:
     networks:
       - ai-stack
 
+  # === DOCKETY DOCKER MANAGEMENT ===
+  dockety:
+    image: ghcr.io/steelburn/dockety-frontend:latest
+    restart: always
+    ports:
+      - "${DOCKETY_PORT}:80"
+    environment:
+      VITE_API_BASE: /api
+    depends_on:
+      - dockety-backend
+    networks:
+      - ai-stack
+
+  dockety-backend:
+    image: ghcr.io/steelburn/dockety-backend:latest
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - dockety_data:/app/data
+    networks:
+      - ai-stack
+
   # === REVERSE PROXY (Nginx with SSL) ===
   nginx:
     build: ./nginx
@@ -423,6 +447,7 @@ volumes:
   dify_api_storage:
   dify_worker_storage:
   nginx_config:
+  dockety_data:
 
 secrets:
   db_password:
