@@ -560,6 +560,56 @@ ssh user@server "cd /path/to/project && git pull"
 
 ---
 
+### 14. Temporary Branch Development Workflow
+
+**The Problem:**
+- Making frequent changes during debugging clutters the main branch
+- Risk of breaking working code with experimental fixes
+- Difficulty tracking which changes actually fixed the problem
+- Hard to revert to working state if fixes don't work
+
+**Root Cause:**
+- Working directly on main/master branch during debugging
+- No isolation of experimental changes
+- Lack of git workflow discipline for bug fixes
+- Treating all changes as permanent commits
+
+**The Solution:**
+- Create separate temporary branch for debugging/fixing
+- Commit and push frequently to backup work
+- Test fixes on the temporary branch
+- Once confirmed working, merge back to master with clean history
+
+**Code Example:**
+```bash
+# Create temporary branch for fixing
+git checkout -b fix-monitoring-503
+
+# Make changes, commit frequently
+git add nginx/nginx.conf
+git commit -m "Remove rate limiting from monitoring location"
+git push origin fix-monitoring-503
+
+# Test fixes, make more commits as needed
+git add monitoring/static/js/app.js
+git commit -m "Fix API endpoint routing"
+git push origin fix-monitoring-503
+
+# Once fixed, merge back to main
+git checkout main
+git merge fix-monitoring-503 --no-ff
+git push origin main
+
+# Clean up temporary branch
+git branch -d fix-monitoring-503
+git push origin --delete fix-monitoring-503
+```
+
+**Lesson Learned:**
+> **Use temporary branches for debugging and fixes.** Isolate experimental changes from the main codebase. Commit and push frequently for backup, then merge cleanly once fixes are confirmed working. This provides safety, clarity, and easy reversion.
+
+---
+
 ## 📞 Contact & Legacy
 
 This document serves as institutional knowledge for future AI stack projects. If you're working on similar complex, multi-service deployments, consider these lessons learned.
