@@ -1,3 +1,10 @@
+[Current] - fix: Resolve monitoring dashboard 503 errors and JavaScript API routing issues (steelburn, now)
+- Fixed nginx rate limiting causing 503 errors for monitoring dashboard
+- Removed overly aggressive rate limits (5 req/min) that blocked static assets
+- Added explicit API endpoint routing for /api/status to return JSON instead of HTML redirects
+- Added nginx config volume mounting for live configuration updates
+- Resolved JavaScript "Unexpected token '<'" errors in monitoring dashboard
+- Updated documentation and troubleshooting guides with solutions
 [Current] - feat: Add Dockety Docker container management dashboard (steelburn, now)
 - Integrated Dockety frontend and backend services for comprehensive Docker management
 - Added nginx routing for /dockety/ path with proper proxy configuration

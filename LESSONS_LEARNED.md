@@ -474,6 +474,56 @@ include /etc/nginx/conf.d/upstreams/*.conf;  # Matching path
 
 ---
 
+### 11. Rate Limiting Configuration Pitfalls
+
+**The Problem:**
+- Monitoring dashboard returning 503 errors due to overly aggressive rate limiting
+- Static assets failing to load because they were hitting rate limits
+- Rate limiting applied to internal API calls between frontend and backend
+- Hard to diagnose because errors appeared intermittent
+
+**Root Cause:**
+- Rate limiting zones configured with very low thresholds (5 requests/minute)
+- Rate limiting applied to all requests including static assets and API calls
+- No distinction between public user requests and internal service communication
+- Rate limit zones persisted across nginx restarts, making testing difficult
+
+**The Solution:**
+- Removed rate limiting from monitoring dashboard entirely
+- Increased rate limits for other services to reasonable levels (100 requests/minute)
+- Used exact location matching (`location = /path`) for API endpoints
+- Added volume mounting for nginx config to enable live updates
+
+**Lesson Learned:**
+> **Rate limiting must be service-aware.** Don't apply blanket rate limits to internal service communication. Use exact location matching for API endpoints and consider per-service rate limiting policies.
+
+---
+
+### 12. Frontend-Backend API Routing Complexity
+
+**The Problem:**
+- JavaScript fetch requests to `/api/status` returning HTML instead of JSON
+- Browser console showing "Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
+- Frontend making absolute path requests that nginx redirected to wrong locations
+- API endpoints working in direct testing but failing through nginx proxy
+
+**Root Cause:**
+- JavaScript using absolute paths (`/api/status`) instead of relative paths
+- Nginx default location redirecting unmatched requests to `/monitoring/`
+- No explicit routing for API endpoints in reverse proxy configuration
+- Frontend and backend path assumptions misaligned
+
+**The Solution:**
+- Added explicit nginx location block for `location = /api/status`
+- Positioned API routes before default redirect in nginx config
+- Used volume mounting for nginx config to avoid container rebuilds
+- Verified API endpoints return proper JSON responses
+
+**Lesson Learned:**
+> **Explicitly route all API endpoints in reverse proxies.** Don't rely on default routing behavior. Frontend absolute paths need corresponding nginx location blocks. Test API responses through the proxy, not just direct service calls.
+
+---
+
 ## 📞 Contact & Legacy
 
 This document serves as institutional knowledge for future AI stack projects. If you're working on similar complex, multi-service deployments, consider these lessons learned.

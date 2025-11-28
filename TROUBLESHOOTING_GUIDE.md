@@ -697,6 +697,79 @@ make check-ports
    docker compose exec monitoring env | grep MONITORING
    ```
 
+### Monitoring Dashboard Returns 503 Errors
+
+**Symptoms:**
+- Monitoring dashboard shows 503 Service Unavailable
+- Static files (CSS/JS) fail to load
+- Rate limiting errors in nginx logs
+
+**Solutions:**
+
+1. **Check Rate Limiting Configuration**
+   ```bash
+   # Check nginx logs for rate limiting
+   docker compose logs nginx | grep "limiting requests"
+
+   # Verify rate limits in nginx config
+   docker compose exec nginx cat /etc/nginx/nginx.conf | grep limit_req
+   ```
+
+2. **Disable Rate Limiting for Monitoring**
+   ```bash
+   # The monitoring dashboard location should not have rate limiting
+   # Check that /monitoring/ location lacks limit_req directive
+   docker compose exec nginx grep -A 5 "location /monitoring/" /etc/nginx/nginx.conf
+   ```
+
+3. **Restart Nginx Service**
+   ```bash
+   # Reload nginx configuration
+   docker compose exec nginx nginx -s reload
+
+   # Or restart the service
+   docker compose restart nginx
+   ```
+
+### JavaScript Errors: "Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
+
+**Symptoms:**
+- Monitoring dashboard loads but shows error messages
+- Browser console shows JSON parsing errors
+- API calls return HTML instead of JSON
+
+**Solutions:**
+
+1. **Check API Endpoint Routing**
+   ```bash
+   # Test API endpoint directly
+   curl -k https://localhost/api/status
+
+   # Should return JSON, not HTML
+   ```
+
+2. **Verify Nginx API Routing**
+   ```bash
+   # Check that /api/status is routed to monitoring service
+   docker compose exec nginx grep -A 5 "location = /api/status" /etc/nginx/nginx.conf
+
+   # Reload nginx if configuration changed
+   docker compose exec nginx nginx -s reload
+   ```
+
+3. **Check JavaScript Fetch Requests**
+   ```bash
+   # JavaScript should use absolute paths like /api/status
+   # Verify the monitoring service returns valid JSON
+   docker compose exec monitoring python3 -c "
+   import requests
+   response = requests.get('http://localhost:8080/api/status')
+   print('Status:', response.status_code)
+   print('Content-Type:', response.headers.get('Content-Type'))
+   print('JSON valid:', response.json() is not None)
+   "
+   ```
+
 ### Resource Monitoring Not Working
 
 **Symptoms:**
