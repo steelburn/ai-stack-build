@@ -650,6 +650,51 @@ git push origin --delete fix-monitoring-503
 
 ---
 
+### 16. Practice What You Preach: Branch Workflow Discipline
+
+**The Problem:**
+- Just documented the importance of using temporary branches for debugging and fixes
+- Immediately violated this principle by making monitoring fixes directly on main branch
+- Inconsistent application of documented best practices
+- Hypocrisy in teaching vs doing
+
+**Root Cause:**
+- Working in a familiar environment with low-risk changes
+- Assumption that documentation-only changes don't need the same rigor
+- Lack of discipline in applying newly-established patterns
+- Comfort zone bias - easier to work directly on main for "simple" fixes
+
+**The Solution:**
+- Acknowledge the inconsistency and commit to proper workflow discipline
+- Create temporary branches even for documentation and configuration changes
+- Establish clear criteria for when temporary branches are required
+- Lead by example in following documented best practices
+
+**Code Example:**
+```bash
+# Proper workflow that should have been followed:
+git checkout -b fix-monitoring-port-config
+# Make all changes to services-config.json
+git add monitoring/services-config.json
+git commit -m "fix: Correct service health check ports and endpoints"
+git push origin fix-monitoring-port-config
+
+# Test changes thoroughly
+# Then merge back to main
+git checkout main
+git merge fix-monitoring-port-config --no-ff -m "feat: Fix monitoring service health checks (#16)"
+git push origin main
+
+# Clean up
+git branch -d fix-monitoring-port-config
+git push origin --delete fix-monitoring-port-config
+```
+
+**Lesson Learned:**
+> **Practice what you document.** If you establish best practices and lessons learned, follow them immediately. Don't make exceptions for "simple" changes - they compound into technical debt. Lead by example and maintain workflow discipline consistently.
+
+---
+
 ## 📞 Contact & Legacy
 
 This document serves as institutional knowledge for future AI stack projects. If you're working on similar complex, multi-service deployments, consider these lessons learned.
