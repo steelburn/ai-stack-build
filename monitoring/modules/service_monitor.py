@@ -109,7 +109,7 @@ def update_nginx_upstream(service_name):
     try:
         # Define service to upstream mappings
         service_upstream_map = {
-            'dify-api': ('dify', 'dify-api:8080'),
+            'dify-api': ('dify', 'dify-api:5001'),
             'dify-web': ('dify', 'dify-web:3000'),
             'n8n': ('n8n', 'n8n:5678'),
             'flowise': ('flowise', 'flowise:3000'),
@@ -128,7 +128,7 @@ def update_nginx_upstream(service_name):
         upstream_name, server_address = service_upstream_map[service_name]
 
         # Create upstream config file
-        upstream_dir = '/etc/nginx/upstreams'
+        upstream_dir = '/etc/nginx/conf.d/upstreams'
         os.makedirs(upstream_dir, exist_ok=True)
 
         upstream_config = """upstream {} {{

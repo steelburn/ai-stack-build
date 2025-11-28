@@ -362,7 +362,7 @@ services:
       - monitoring_password
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - nginx_config:/etc/nginx/upstreams
+      - nginx_config:/etc/nginx/conf.d/upstreams
       - ./monitoring/modules:/app/modules
     networks:
       - ai-stack
