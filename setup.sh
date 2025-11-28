@@ -42,6 +42,14 @@ log_error() {
     echo "[$timestamp] [ERROR] $1" >> "$LOG_FILE"
 }
 
+# Simple logging functions (without colors, for scripts that don't need them)
+log_simple() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+}
+
 # Error handling
 error_handler() {
     local exit_code=$?
