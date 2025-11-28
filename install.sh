@@ -4,9 +4,72 @@
 # Version: 1.1.0
 # Usage: curl -fsSL https://raw.githubusercontent.com/steelburn/ai-stack-build/main/install.sh | bash
 
-# Source common library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/lib/common.sh"
+# =============================================================================
+# INLINE COMMON FUNCTIONS (for curl-based installation)
+# =============================================================================
+
+# Error logging setup
+LOG_FILE="${HOME}/ai-stack-install.log"
+exec 2>>"$LOG_FILE"  # Redirect stderr to log file
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${BLUE}[INFO]${NC} $1"
+    echo "[$timestamp] [INFO] $1" >> "$LOG_FILE"
+}
+
+log_success() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo "[$timestamp] [SUCCESS] $1" >> "$LOG_FILE"
+}
+
+log_warning() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo "[$timestamp] [WARNING] $1" >> "$LOG_FILE"
+}
+
+log_error() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+    echo "[$timestamp] [ERROR] $1" >> "$LOG_FILE"
+}
+
+# Error handling
+error_handler() {
+    local exit_code=$?
+    log_error "Script failed at line $LINENO with exit code $exit_code - Check log file: $LOG_FILE"
+    exit 1
+}
+
+# Check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Setup error handling with trap
+setup_error_handling() {
+    set -e
+    trap error_handler ERR
+}
+
+# =============================================================================
+# END INLINE COMMON FUNCTIONS
+# =============================================================================
+
+# Try to source common library (for local development)
+if [[ -f "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh" ]]; then
+    source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+fi
 
 # Setup error handling
 setup_error_handling
