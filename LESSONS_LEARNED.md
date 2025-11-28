@@ -610,6 +610,46 @@ git push origin --delete fix-monitoring-503
 
 ---
 
+### 15. Service Health Check Port Configuration Complexity
+
+**The Problem:**
+- Monitoring dashboard showed services as down even though containers were running
+- Port mismatches between monitoring configuration and actual Docker container ports
+- External host ports vs internal container network ports confusion
+- Services requiring authentication for health endpoints
+- Different services having different health check endpoints
+
+**Root Cause:**
+- Monitoring service used external ports (e.g., 8082) instead of internal container ports (e.g., 8080)
+- services-config.json had incorrect port mappings from initial setup
+- Some services require authentication for health endpoints
+- Different services expose health checks on different paths (/health, /, /healthz)
+- Docker network connectivity issues between monitoring and service containers
+
+**The Solution:**
+- Updated services-config.json to use correct internal container ports
+- Fixed port mappings: dify-api (5001), dify-web (3000), openwebui (8080), ollama-webui (8080), dockety (80)
+- Changed authenticated endpoints to root endpoints for services requiring auth (flowise, litellm)
+- Fixed qdrant endpoint from /health to / (root endpoint)
+- Connected monitoring container to correct Docker network for service discovery
+- Removed dify-worker from monitoring (no HTTP endpoints)
+
+**Technical Details:**
+```json
+// Before (wrong ports)
+"dify-api": {"url": "http://dify-api:8080/health"}
+"openwebui": {"url": "http://openwebui:8082/health"}
+
+// After (correct internal ports)
+"dify-api": {"url": "http://dify-api:5001/health"}
+"openwebui": {"url": "http://openwebui:8080/health"}
+```
+
+**Lesson Learned:**
+> **Health check configurations must use internal container ports, not external host ports.** When monitoring services within Docker networks, use the container's internal port mappings. Test health endpoints directly and handle authentication requirements. Different services may expose health checks on different paths - validate each service's actual endpoints.
+
+---
+
 ## 📞 Contact & Legacy
 
 This document serves as institutional knowledge for future AI stack projects. If you're working on similar complex, multi-service deployments, consider these lessons learned.
