@@ -9,6 +9,56 @@ x-logging: &default-logging
     labels: "security"
 
 services:
+  # === DOCKER SOCKET PROXY ===
+  docker-socket-proxy:
+    image: steelburn/docker-socket-proxy:latest
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Allow container operations
+      CONTAINERS: 1
+      # Allow service operations  
+      SERVICES: 1
+      # Allow exec operations
+      EXEC: 1
+      # Allow version/info operations
+      INFO: 1
+      # Allow network operations
+      NETWORKS: 1
+      # Allow volume operations
+      VOLUMES: 1
+      # Allow image operations
+      IMAGES: 1
+      # Allow system operations
+      SYSTEM: 1
+      # Allow task operations
+      TASKS: 1
+      # Allow swarm operations
+      SWARM: 1
+      # Allow plugin operations
+      PLUGINS: 1
+      # Allow node operations
+      NODES: 1
+      # Allow secret operations
+      SECRETS: 1
+      # Allow config operations
+      CONFIGS: 1
+      # Allow distribution operations
+      DISTRIBUTION: 1
+      # Allow session operations
+      SESSION: 1
+      # Allow logs operations
+      LOGS: 1
+      # Allow events operations
+      EVENTS: 1
+      # Allow auth operations
+      AUTH: 1
+      # Allow build operations
+      BUILD: 1
+    networks:
+      - ai-stack
+
   db:
     image: postgres:15-alpine
     restart: always
@@ -414,10 +464,9 @@ services:
     ports:
       - "8083:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace
     environment:
-      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
       POSTGRES_HOST: db
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -425,6 +474,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
     networks:
       - ai-stack
 

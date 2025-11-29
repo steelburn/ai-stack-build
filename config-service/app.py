@@ -13,23 +13,17 @@ app = Flask(__name__,
 load_dotenv()
 
 # Initialize Docker client using API
-docker_socket_path = '/var/run/docker.sock'
-docker_available = os.path.exists(docker_socket_path) and os.access(docker_socket_path, os.R_OK)
-
-if docker_available:
-    try:
-        # Use Docker client with FromEnv to auto-detect configuration
-        docker_client = docker.from_env()
-        # Test the connection
-        docker_client.ping()
-        print("Docker client initialized successfully")
-    except Exception as e:
-        print(f"Docker client initialization failed: {e}")
-        docker_client = None
-        docker_available = False
-else:
-    print("Docker socket not available")
+docker_available = True
+try:
+    # Use Docker client connecting to the socket proxy
+    docker_client = docker.DockerClient(base_url='tcp://docker-socket-proxy:2375')
+    # Test the connection
+    docker_client.ping()
+    print("Docker client initialized successfully via socket proxy")
+except Exception as e:
+    print(f"Docker client initialization failed: {e}")
     docker_client = None
+    docker_available = False
 
 def get_db_connection():
     return psycopg2.connect(
@@ -47,37 +41,52 @@ def index():
 
 @app.route('/api/services')
 def get_services():
-    # For now, always return mock data since Docker integration is problematic in containerized environments
-    return jsonify([
-        {
-            'id': 'mock-db',
-            'name': 'ai-stack-build_db_1',
-            'status': 'running',
-            'image': 'postgres:15-alpine'
-        },
-        {
-            'id': 'mock-config-service', 
-            'name': 'ai-stack-build_config-service_1',
-            'status': 'running',
-            'image': 'config-service:latest'
-        },
-        {
-            'id': 'mock-nginx',
-            'name': 'ai-stack-nginx-1',
-            'status': 'running', 
-            'image': 'nginx:latest'
-        }
-    ])
+    if not docker_available:
+        return jsonify({'error': 'Docker client not available'}), 503
+    
+    try:
+        # Get list of containers using Docker client
+        containers = docker_client.containers.list(all=True)
+        services = []
+        for container in containers:
+            services.append({
+                'id': container.id,
+                'name': container.name,
+                'status': container.status,
+                'image': container.image.tags[0] if container.image.tags else container.image.id
+            })
+        return jsonify(services)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/restart/<service_name>', methods=['POST'])
 def restart_service(service_name):
-    # Mock restart functionality
-    return jsonify({'status': 'success', 'message': f'Service {service_name} restart simulated (Docker integration not available in containerized environment)'})
+    if not docker_available:
+        return jsonify({'status': 'error', 'message': 'Docker client not available'})
+    
+    try:
+        # Restart container using Docker client
+        container = docker_client.containers.get(service_name)
+        container.restart()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/nginx/reload', methods=['POST'])
 def reload_nginx():
-    # Mock nginx reload functionality
-    return jsonify({'status': 'success', 'message': 'Nginx reload simulated (Docker integration not available in containerized environment)'})
+    if not docker_available:
+        return jsonify({'status': 'error', 'message': 'Docker client not available'})
+    
+    try:
+        # Execute nginx reload command using Docker client
+        container = docker_client.containers.get('ai-stack-nginx-1')
+        result = container.exec_run('nginx -s reload')
+        if result.exit_code == 0:
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'status': 'error', 'message': result.output.decode()})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/config/files')
 def list_config_files():
