@@ -18,15 +18,17 @@ docker_available = os.path.exists(docker_socket_path) and os.access(docker_socke
 
 if docker_available:
     try:
-        # Use Docker client with Unix socket
-        docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        # Use Docker client with FromEnv to auto-detect configuration
+        docker_client = docker.from_env()
         # Test the connection
         docker_client.ping()
+        print("Docker client initialized successfully")
     except Exception as e:
         print(f"Docker client initialization failed: {e}")
         docker_client = None
         docker_available = False
 else:
+    print("Docker socket not available")
     docker_client = None
 
 def get_db_connection():
