@@ -12,7 +12,7 @@ load_dotenv()
 
 # Docker client
 import docker
-docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
+docker_client = docker.APIClient(base_url='unix:///var/run/docker.sock')
 
 # Database connection
 def get_db_connection():
