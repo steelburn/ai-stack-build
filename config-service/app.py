@@ -18,8 +18,8 @@ docker_available = os.path.exists(docker_socket_path) and os.access(docker_socke
 
 if docker_available:
     try:
-        # Use Docker client with proper configuration
-        docker_client = docker.APIClient(base_url=f'unix://{docker_socket_path}')
+        # Use Docker client with proper Unix socket configuration
+        docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
         # Test the connection
         docker_client.ping()
     except Exception as e:
