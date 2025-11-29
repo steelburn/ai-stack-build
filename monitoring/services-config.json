@@ -52,10 +52,6 @@
     "url": "http://rabbitmq:15672/",
     "name": "RabbitMQ Management"
   },
-  "monitoring": {
-    "url": "http://monitoring:8080/",
-    "name": "Monitoring Dashboard"
-  },
   "adminer": {
     "url": "http://adminer:8080/",
     "name": "Database Admin (Adminer)",
