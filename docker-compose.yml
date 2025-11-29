@@ -137,7 +137,6 @@ services:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
-      LITELLM_MASTER_KEY: "$(cat /run/secrets/litellm_master_key)"
       UI_USERNAME: ${UI_USERNAME}
       UI_PASSWORD: ${UI_PASSWORD}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

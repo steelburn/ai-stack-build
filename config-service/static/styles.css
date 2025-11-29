@@ -1,26 +1,19 @@
 body {
-    font-family: Arial, sans-serif;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+    background-color: #f8f9fa;
 }
 
-.service {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
+.service-card {
+    margin-bottom: 1rem;
 }
 
-button {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
+.status-running {
+    color: #28a745;
 }
 
-button:hover {
-    background: #0056b3;
+.status-stopped {
+    color: #dc3545;
+}
+
+.btn-restart {
+    margin-left: 0.5rem;
 }
