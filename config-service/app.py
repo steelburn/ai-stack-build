@@ -38,7 +38,7 @@ def index():
 @app.route('/api/services')
 def get_services():
     if not docker_available:
-        return jsonify({'error': 'Docker client not available'})
+        return jsonify({'error': 'Docker client not available'}), 503
     
     try:
         containers = docker_client.containers.list(all=True)
@@ -52,7 +52,7 @@ def get_services():
             })
         return jsonify(services)
     except Exception as e:
-        return jsonify({'error': str(e)})
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/restart/<service_name>', methods=['POST'])
 def restart_service(service_name):
