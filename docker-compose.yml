@@ -447,7 +447,7 @@ services:
     ports:
       - "8083:8080"
     volumes:
-      - ./config-service:/app
+      - .:/workspace
     environment:
       DOCKER_HOST: tcp://docker-socket-proxy:2375
       POSTGRES_HOST: db
