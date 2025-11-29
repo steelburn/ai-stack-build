@@ -24,10 +24,6 @@
     "url": "http://openmemory:8765/docs",
     "name": "OpenMemory"
   },
-  "n8n": {
-    "url": "http://n8n:5678/healthz",
-    "name": "N8N"
-  },
   "flowise": {
     "url": "http://flowise:3000/health",
     "name": "Flowise"
@@ -39,6 +35,22 @@
   "qdrant": {
     "url": "http://qdrant:6333/health",
     "name": "Qdrant"
+  },
+  "supabase": {
+    "url": "http://supabase:5432/",
+    "name": "Supabase PostgreSQL"
+  },
+  "nginx": {
+    "url": "http://nginx:80/",
+    "name": "Nginx Reverse Proxy"
+  },
+  "rabbitmq": {
+    "url": "http://rabbitmq:15672/",
+    "name": "RabbitMQ Management"
+  },
+  "monitoring": {
+    "url": "http://monitoring:8080/",
+    "name": "Monitoring Dashboard"
   },
   "adminer": {
     "url": "http://adminer:8080/",
