@@ -18,12 +18,12 @@ docker_available = os.path.exists(docker_socket_path) and os.access(docker_socke
 
 if docker_available:
     try:
-        # Use Docker client with proper Unix socket configuration
-        docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
+        # Use Docker client with Unix socket
+        docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
         # Test the connection
         docker_client.ping()
     except Exception as e:
-        print(f"Docker API client initialization failed: {e}")
+        print(f"Docker client initialization failed: {e}")
         docker_client = None
         docker_available = False
 else:
@@ -49,15 +49,15 @@ def get_services():
         return jsonify({'error': 'Docker socket not available'}), 503
     
     try:
-        # Get list of containers using Docker API
-        containers = docker_client.containers(all=True)
+        # Get list of containers using Docker client
+        containers = docker_client.containers.list(all=True)
         services = []
         for container in containers:
             services.append({
-                'id': container['Id'],
-                'name': container['Names'][0].lstrip('/') if container['Names'] else container['Id'][:12],
-                'status': container['Status'],
-                'image': container['Image']
+                'id': container.id,
+                'name': container.name,
+                'status': container.status,
+                'image': container.image.tags[0] if container.image.tags else container.image.id
             })
         return jsonify(services)
     except Exception as e:
@@ -69,8 +69,9 @@ def restart_service(service_name):
         return jsonify({'status': 'error', 'message': 'Docker socket not available'})
     
     try:
-        # Restart container using Docker API
-        docker_client.restart(service_name)
+        # Restart container using Docker client
+        container = docker_client.containers.get(service_name)
+        container.restart()
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -81,10 +82,13 @@ def reload_nginx():
         return jsonify({'status': 'error', 'message': 'Docker socket not available'})
     
     try:
-        # Execute nginx reload command using Docker API
-        exec_result = docker_client.exec_create('ai-stack-nginx-1', ['nginx', '-s', 'reload'])
-        docker_client.exec_start(exec_result['Id'])
-        return jsonify({'status': 'success'})
+        # Execute nginx reload command using Docker client
+        container = docker_client.containers.get('ai-stack-nginx-1')
+        result = container.exec_run('nginx -s reload')
+        if result.exit_code == 0:
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'status': 'error', 'message': result.output.decode()})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
