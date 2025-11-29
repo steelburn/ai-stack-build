@@ -11,9 +11,8 @@ app = Flask(__name__)
 load_dotenv()
 
 # Docker client
-import os
-os.environ['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
-docker_client = docker.from_env()
+import docker
+docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
 
 # Database connection
 def get_db_connection():
@@ -30,19 +29,18 @@ def index():
 
 @app.route('/api/services')
 def get_services():
-    services = docker_client.containers.list()
+    containers = docker_client.containers()
     return jsonify([{
-        'id': s.id,
-        'name': s.name,
-        'status': s.status,
-        'image': s.image.tags[0] if s.image.tags else 'unknown'
-    } for s in services])
+        'id': s['Id'],
+        'name': s['Names'][0] if s['Names'] else 'unknown',
+        'status': s['Status'],
+        'image': s['Image']
+    } for s in containers])
 
 @app.route('/api/restart/<service_name>', methods=['POST'])
 def restart_service(service_name):
     try:
-        container = docker_client.containers.get(service_name)
-        container.restart()
+        docker_client.restart(service_name)
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -63,8 +61,8 @@ def update_config(service_name):
 @app.route('/api/nginx/reload', methods=['POST'])
 def reload_nginx():
     try:
-        container = docker_client.containers.get('ai-stack-nginx-1')
-        container.exec_run('nginx -s reload')
+        exec_result = docker_client.exec_create('ai-stack-nginx-1', 'nginx -s reload')
+        docker_client.exec_start(exec_result)
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
