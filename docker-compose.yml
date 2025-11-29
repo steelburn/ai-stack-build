@@ -413,7 +413,7 @@ services:
     build: ./config-service
     restart: always
     ports:
-      - "8081:8080"
+      - "8082:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace
