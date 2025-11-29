@@ -24,6 +24,10 @@
     "url": "http://openmemory:8765/docs",
     "name": "OpenMemory"
   },
+  "n8n": {
+    "url": "http://n8n:5678/healthz",
+    "name": "N8N"
+  },
   "flowise": {
     "url": "http://flowise:3000/health",
     "name": "Flowise"
