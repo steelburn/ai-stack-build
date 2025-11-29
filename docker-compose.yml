@@ -408,6 +408,26 @@ services:
     networks:
       - ai-stack
 
+  # === CONFIG SERVICE ===
+  config-service:
+    build: ./config-service
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ai-stack
+
 networks:
   ai-stack:
     driver: bridge
