@@ -153,7 +153,7 @@ async function loadConfigFile(filePath) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <textarea id="code-editor" is="highlighted-code" class="form-control" style="height: 500px; font-family: 'Courier New', monospace; resize: vertical;" language="${mode}">${data.content}</textarea>
+                        <textarea id="code-editor" class="form-control" style="height: 500px; font-family: 'Courier New', monospace; resize: vertical;" language="${mode}">${data.content}</textarea>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
