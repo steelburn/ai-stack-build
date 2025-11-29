@@ -17,7 +17,7 @@
     "name": "Ollama WebUI"
   },
   "litellm": {
-    "url": "http://litellm:4000/",
+    "url": "http://litellm:4000/health",
     "name": "LiteLLM"
   },
   "openmemory": {
@@ -29,7 +29,7 @@
     "name": "N8N"
   },
   "flowise": {
-    "url": "http://flowise:3000/",
+    "url": "http://flowise:3000/health",
     "name": "Flowise"
   },
   "openwebui": {
@@ -37,7 +37,7 @@
     "name": "OpenWebUI"
   },
   "qdrant": {
-    "url": "http://qdrant:6333/",
+    "url": "http://qdrant:6333/health",
     "name": "Qdrant"
   },
   "adminer": {
