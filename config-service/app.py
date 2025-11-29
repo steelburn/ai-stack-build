@@ -11,6 +11,8 @@ app = Flask(__name__)
 load_dotenv()
 
 # Docker client
+import os
+os.environ['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
 docker_client = docker.from_env()
 
 # Database connection
