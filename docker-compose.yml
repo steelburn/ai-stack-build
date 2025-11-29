@@ -417,6 +417,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace
     environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
       POSTGRES_HOST: db
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
