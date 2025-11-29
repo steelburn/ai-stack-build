@@ -3,8 +3,7 @@ import psycopg2
 import os
 import json
 from dotenv import load_dotenv
-import requests
-import requests_unixsocket
+import docker
 
 app = Flask(__name__,
             template_folder='templates',
@@ -13,30 +12,22 @@ app = Flask(__name__,
 # Load environment variables
 load_dotenv()
 
-# Initialize Docker API client
+# Initialize Docker client using API
 docker_socket_path = '/var/run/docker.sock'
-docker_available = os.path.exists(docker_socket_path)
+docker_available = os.path.exists(docker_socket_path) and os.access(docker_socket_path, os.R_OK)
 
-def docker_api_request(endpoint, method='GET', data=None):
-    """Make a request to the Docker Engine API via Unix socket"""
-    if not docker_available:
-        raise Exception('Docker socket not available')
-    
-    session = requests_unixsocket.Session()
-    url = f'http+unix://{docker_socket_path.replace("/", "%2F")}{endpoint}'
-    
+if docker_available:
     try:
-        if method == 'GET':
-            response = session.get(url)
-        elif method == 'POST':
-            response = session.post(url, json=data)
-        else:
-            raise ValueError(f'Unsupported method: {method}')
-        
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        raise Exception(f'Docker API request failed: {str(e)}')
+        # Use Docker client with proper configuration
+        docker_client = docker.APIClient(base_url=f'unix://{docker_socket_path}')
+        # Test the connection
+        docker_client.ping()
+    except Exception as e:
+        print(f"Docker API client initialization failed: {e}")
+        docker_client = None
+        docker_available = False
+else:
+    docker_client = None
 
 def get_db_connection():
     return psycopg2.connect(
@@ -58,19 +49,15 @@ def get_services():
         return jsonify({'error': 'Docker socket not available'}), 503
     
     try:
-        # Get list of containers using Docker Engine API
-        containers = docker_api_request('/containers/json?all=true')
+        # Get list of containers using Docker API
+        containers = docker_client.containers(all=True)
         services = []
         for container in containers:
-            # Get container details to get image tags
-            container_details = docker_api_request(f'/containers/{container["Id"]}/json')
-            image_tags = container_details.get('RepoTags', [])
-            
             services.append({
                 'id': container['Id'],
                 'name': container['Names'][0].lstrip('/') if container['Names'] else container['Id'][:12],
                 'status': container['Status'],
-                'image': image_tags[0] if image_tags else container['Image']
+                'image': container['Image']
             })
         return jsonify(services)
     except Exception as e:
@@ -82,8 +69,8 @@ def restart_service(service_name):
         return jsonify({'status': 'error', 'message': 'Docker socket not available'})
     
     try:
-        # Restart container using Docker Engine API
-        docker_api_request(f'/containers/{service_name}/restart', method='POST')
+        # Restart container using Docker API
+        docker_client.restart(service_name)
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -94,22 +81,9 @@ def reload_nginx():
         return jsonify({'status': 'error', 'message': 'Docker socket not available'})
     
     try:
-        # Execute nginx reload command using Docker Engine API
-        exec_data = {
-            'AttachStdin': False,
-            'AttachStdout': True,
-            'AttachStderr': True,
-            'Tty': False,
-            'Cmd': ['nginx', '-s', 'reload']
-        }
-        
-        # Create exec instance
-        exec_response = docker_api_request('/containers/ai-stack-nginx-1/exec', method='POST', data=exec_data)
-        exec_id = exec_response['Id']
-        
-        # Start the exec instance
-        start_response = docker_api_request(f'/exec/{exec_id}/start', method='POST', data={'Detach': False, 'Tty': False})
-        
+        # Execute nginx reload command using Docker API
+        exec_result = docker_client.exec_create('ai-stack-nginx-1', ['nginx', '-s', 'reload'])
+        docker_client.exec_start(exec_result['Id'])
         return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
